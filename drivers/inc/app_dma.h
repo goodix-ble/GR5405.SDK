@@ -153,12 +153,12 @@ dma_id_t app_dma_init(app_dma_params_t *p_params, app_dma_evt_handler_t evt_hand
  ****************************************************************************************
  * @brief  De-initialize the APP ADC DRIVER peripheral.
  *
- * @param[in]  ins_id: Deinitialize DMA channel for a specific ID.
+ * @param[in]  id: Deinitialize DMA channel for a specific ID.
  *
  * @return Result of De-initialization.
  ****************************************************************************************
  */
-uint16_t app_dma_deinit(dma_id_t ins_id);
+uint16_t app_dma_deinit(dma_id_t id);
 
 /**
  ****************************************************************************************

@@ -145,6 +145,10 @@ extern "C" {
 #define APP_IO_MUX APP_IO_MUX_7
 #endif
 
+#if defined(SOC_GR5410)
+#define APP_IO_GPIO_SUPPORT_ANA_MODE
+#endif
+
 #if defined(SOC_GR5515) || defined(SOC_GR533X) || defined(SOC_GR5405) || defined(SOC_GR5410)
 #ifndef  DMA0
 #define  DMA_INSTANCE_MAX   1
@@ -303,16 +307,22 @@ extern "C" {
 #if defined(SOC_GR5X25) || defined(SOC_GR533X) || defined(SOC_GR5405)
 #define SYSTEM_RTC_SLOW_CLOCK_ENABLE
 #endif
-#if defined(SOC_GR533X) || defined(SOC_GR5405)
+#if defined(SOC_GR533X) || defined(SOC_GR5405) || defined(SOC_GR5410)
 #if defined(ENV_USE_FREERTOS)
 #define OS_TICK_BASE_RTC_ENABLE
 #endif
 #endif
-#if (CFG_LPCLK_INTERNAL_EN == 0) || defined(SOC_GR5X25) || defined(SOC_GR533X) || defined(SOC_GR5405)
+#if (CFG_LPCLK_INTERNAL_EN == 0) || defined(SOC_GR5X25) || defined(SOC_GR533X) || defined(SOC_GR5405) || defined(SOC_GR5410)
 #define APP_RTC_WORK_AROUND_DISABLE
 #endif
 #if defined(SOC_GR5515)
 #define APP_RTC_GR551X_LEGACY
+#endif
+#if defined(SOC_GR5410)
+#ifndef CALENDAR_IRQn
+#define CALENDAR_IRQn RTC_IRQn
+#endif
+#define APP_RTC_NO_LL_CALENDAR_DRIVER
 #endif
 
 #if defined(SOC_GR5X25) || defined(SOC_GR533X) || defined(SOC_GR5405)
@@ -328,6 +338,18 @@ extern "C" {
 #endif
 #if defined(SOC_GR5515)
 #define  APP_ADC_INPUT_SRC_GR551X_LEGACY_ENABLE
+#endif
+
+#if defined(SOC_GR5515) || defined(SOC_GR5X25) || defined(SOC_GR5526) || defined(SOC_GR533X) || defined(SOC_GR5405)
+#define APP_ADC_SNSADC_ENABLE
+#define APP_ADC_IO_TYPE     APP_IO_TYPE_MSIO
+#define APP_ADC_IO_MUX      APP_IO_MUX
+#endif
+
+#if defined(SOC_GR5410)
+#define APP_ADC_GPADC_ENABLE
+#define APP_ADC_IO_TYPE     APP_IO_TYPE_GPIOA
+#define APP_ADC_IO_MUX      APP_IO_MUX_2
 #endif
 
 #if defined(SOC_GR5X25) || defined(SOC_GR5526) || defined(SOC_GR533X) || defined(SOC_GR5405) || defined(SOC_GR5410)
@@ -361,6 +383,8 @@ extern "C" {
 #define APP_AON_WDT_MULTI_INSTANCE
 #define AON_WDT_INSTANCE_MAX    2
 #define APP_AON_WDT_SUPPORT_FREQ_DIV
+#else
+#define AON_WDT_INSTANCE_MAX    1
 #endif
 
 #if defined(SOC_GR5515)
@@ -375,6 +399,10 @@ extern "C" {
 #endif
 #if defined(SOC_GR5405) || defined(SOC_GR5410)
   #define APP_PWR_MGMT_HAL_REG_ENABLE
+#endif
+
+#if defined(SOC_GR5410)
+#define LIN_INSTANCE_MAX       2
 #endif
 
 /**
@@ -452,6 +480,14 @@ extern "C" {
 
 #ifndef APP_DRIVER_PDM_WAKEUP_PRIORITY
 #define APP_DRIVER_PDM_WAKEUP_PRIORITY              WAKEUP_PRIORITY_HIGH    /**< PDM Wakeup priority High */
+#endif
+
+#ifndef APP_DRIVER_CAN_WAKEUP_PRIORITY
+#define APP_DRIVER_CAN_WAKEUP_PRIORITY              WAKEUP_PRIORITY_HIGH    /**< CAN Wakeup priority High */
+#endif
+
+#ifndef APP_DRIVER_LIN_WAKEUP_PRIORITY
+#define APP_DRIVER_LIN_WAKEUP_PRIORITY              WAKEUP_PRIORITY_HIGH    /**< LIN Wakeup priority High */
 #endif
 
 /**@} */

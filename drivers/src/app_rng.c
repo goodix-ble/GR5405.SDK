@@ -58,7 +58,7 @@ void RNG_IRQHandler(void);
  */
 rng_env_t *p_rng_env = NULL;
 
-const static app_sleep_callbacks_t rng_sleep_cb =
+static const app_sleep_callbacks_t rng_sleep_cb =
 {
     .app_prepare_for_sleep = rng_prepare_for_sleep,
     .app_wake_up_ind       = rng_wake_up_ind
@@ -91,7 +91,7 @@ static bool rng_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void rng_wake_up_ind(void)
+static SECTION_RAM_CODE void rng_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     if (p_rng_env->rng_state == APP_RNG_ACTIVITY)

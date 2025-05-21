@@ -104,10 +104,10 @@ hal_status_t hal_rtc_init(rtc_handle_t *p_rtc)
         NVIC_ClearPendingIRQ(CALENDAR_IRQn);
         NVIC_EnableIRQ(CALENDAR_IRQn);
 
-        /* Clear warp interrupt flag */
+        /* Clear wrap interrupt flag */
         __HAL_RTC_CLEAR_FLAG(p_rtc->p_instance, RTC_FLAG_WRAP | RTC_FLAG_ALARM | RTC_FLAG_TICK);
 
-        /* Disable warp interrupt */
+        /* Disable wrap interrupt */
         __HAL_RTC_DISABLE_IT(p_rtc->p_instance, RTC_IT_ALARM | RTC_IT_TICK | RTC_IT_WRAP);
 
         /*set overflow_det or not*/

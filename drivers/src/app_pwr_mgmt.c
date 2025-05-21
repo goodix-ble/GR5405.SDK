@@ -180,11 +180,13 @@ pwr_id_t pwr_register_sleep_cb(const app_sleep_callbacks_t *p_cb, wakeup_priorit
 {
     app_pwr_mgmt_init();
 
+    //lint -e656 The compiler will perform implicit conversions by default.
     if (id >= PWR_ID_MAX || ((unsigned)(wakeup_priority - WAKEUP_PRIORITY_LOW) > (WAKEUP_PRIORITY_HIGH - WAKEUP_PRIORITY_LOW)))
     {
         return PWR_ID_MAX;
     }
 
+    //lint -e9005 To save RAM size, the function pointers related to sleep have been placed in flash memory.
     s_pwr_env.pwr_sleep_cb[id] = (app_sleep_callbacks_t *)p_cb;
     s_pwr_env.wakeup_priority[id] = wakeup_priority;
 

@@ -61,7 +61,7 @@ static const uint32_t    s_tim_instance[APP_TIM_ID_MAX] = { TIMER0_BASE, TIMER1_
 
 tim_env_t *p_tim_env[APP_TIM_ID_MAX];
 
-const static app_sleep_callbacks_t tim_sleep_cb =
+static const app_sleep_callbacks_t tim_sleep_cb =
 {
     .app_prepare_for_sleep = tim_prepare_for_sleep,
     .app_wake_up_ind       = tim_wake_up_ind,
@@ -76,7 +76,7 @@ static bool tim_prepare_for_sleep(void)
     return false;
 }
 
-SECTION_RAM_CODE static void tim_wake_up_ind(void)
+static SECTION_RAM_CODE void tim_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     uint32_t i;
@@ -133,6 +133,10 @@ static void app_tim_event_call(timer_handle_t *p_tim, app_tim_evt_t evt_type)
     {
         id = APP_TIM_ID_1;
     }
+    else
+    {
+        // Nothing to do.
+    }
 
     if (evt_type == APP_TIM_EVT_DONE)
     {
@@ -154,6 +158,10 @@ static void app_tim_event_call(timer_handle_t *p_tim, app_tim_evt_t evt_type)
     else if(evt_type == APP_TIM_EVT_CHANNEL3)
     {
         tim_evt = APP_TIM_EVT_CHANNEL3;
+    }
+    else
+    {
+        // Nothing to do.
     }
 #endif
 
@@ -284,11 +292,11 @@ uint16_t app_tim_start(app_tim_id_t id)
     tim_wake_up(id);
 #endif
 
-    #ifdef APP_TIM_IO_CAPTURE_ENABLE
-        err_code = hal_timer_start_it(&p_tim_env[id]->handle);
-    #else
-        err_code = hal_timer_base_start_it(&p_tim_env[id]->handle);
-    #endif
+#ifdef APP_TIM_IO_CAPTURE_ENABLE
+    err_code = hal_timer_start_it(&p_tim_env[id]->handle);
+#else
+    err_code = hal_timer_base_start_it(&p_tim_env[id]->handle);
+#endif
     HAL_ERR_CODE_CHECK(err_code);
 
     return APP_DRV_SUCCESS;
@@ -312,11 +320,11 @@ uint16_t app_tim_stop(app_tim_id_t id)
     tim_wake_up(id);
 #endif
 
-    #ifdef APP_TIM_IO_CAPTURE_ENABLE
-        err_code = hal_timer_stop_it(&p_tim_env[id]->handle);
-    #else
-        err_code = hal_timer_base_stop_it(&p_tim_env[id]->handle);
-    #endif
+#ifdef APP_TIM_IO_CAPTURE_ENABLE
+    err_code = hal_timer_stop_it(&p_tim_env[id]->handle);
+#else
+    err_code = hal_timer_base_stop_it(&p_tim_env[id]->handle);
+#endif
     HAL_ERR_CODE_CHECK(err_code);
 
     return APP_DRV_SUCCESS;

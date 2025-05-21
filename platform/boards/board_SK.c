@@ -52,18 +52,24 @@
 /*
     BOARD_SK DEFINE .
 */
-#define UART_TX_BUFF_SIZE                  0x400
+#ifndef LOG_TX_BUFF_SIZE
+    #define LOG_TX_BUFF_SIZE                  0x400
+#endif
 
 /*
  * LOCAL VARIABLE DEFINITIONS
  *****************************************************************************************
  */
-static uint8_t s_uart_tx_buffer[UART_TX_BUFF_SIZE];
+static uint8_t s_uart_tx_buffer[LOG_TX_BUFF_SIZE];
 static app_uart_params_t uart_param;
 
 void bsp_uart_send(uint8_t *p_data, uint16_t length)
 {
+#ifdef APP_LOG_ASYNC
+    app_uart_transmit_async(APP_UART_ID, p_data, length);
+#else
     app_uart_transmit_sync(APP_UART_ID, p_data, length, 1000);
+#endif
 }
 
 void bsp_uart_receive_it(uint8_t *p_data, uint16_t length)
@@ -91,7 +97,7 @@ void bsp_uart_init(void)
     app_uart_tx_buf_t uart_buffer;
 
     uart_buffer.tx_buf       = s_uart_tx_buffer;
-    uart_buffer.tx_buf_size  = UART_TX_BUFF_SIZE;
+    uart_buffer.tx_buf_size  = LOG_TX_BUFF_SIZE;
 
     uart_param.id                   = APP_UART_ID;
     uart_param.init.baud_rate       = APP_UART_BAUDRATE;
@@ -148,10 +154,17 @@ void bsp_log_init(void)
     app_log_init_t   log_init;
 
     log_init.filter.level                 = APP_LOG_LVL_DEBUG;
+#ifdef APP_LOG_NO_PFX
+    log_init.fmt_set[APP_LOG_LVL_ERROR]   = APP_LOG_FMT_NULL;
+    log_init.fmt_set[APP_LOG_LVL_WARNING] = APP_LOG_FMT_NULL;
+    log_init.fmt_set[APP_LOG_LVL_INFO]    = APP_LOG_FMT_NULL;
+    log_init.fmt_set[APP_LOG_LVL_DEBUG]   = APP_LOG_FMT_NULL;
+#else
     log_init.fmt_set[APP_LOG_LVL_ERROR]   = APP_LOG_FMT_ALL & (~APP_LOG_FMT_TAG);
     log_init.fmt_set[APP_LOG_LVL_WARNING] = APP_LOG_FMT_LVL;
     log_init.fmt_set[APP_LOG_LVL_INFO]    = APP_LOG_FMT_LVL;
     log_init.fmt_set[APP_LOG_LVL_DEBUG]   = APP_LOG_FMT_LVL;
+#endif
 
 #if (APP_LOG_PORT == 0)
     app_log_init(&log_init, bsp_uart_send, bsp_uart_flush);
@@ -160,13 +173,13 @@ void bsp_log_init(void)
     app_log_init(&log_init, bsp_segger_rtt_send, NULL);
 #elif (APP_LOG_PORT == 2)
     app_log_init(&log_init, bsp_itm_send, NULL);
-#endif
+#endif /* APP_LOG_PORT */
 
-#endif
+#endif /* APP_LOG_PORT <= 2 */
+
+#endif /* APP_LOG_ENABLE == 1 */
 
     app_assert_init();
-
-#endif
 }
 
 __WEAK void app_key_evt_handler(uint8_t key_id, app_key_click_type_t key_click_type)

@@ -138,7 +138,9 @@ static const i2c_dma_info_t s_i2c_dma_info[APP_I2C_ID_MAX] = {
  * LOCAL FUNCTION DECLARATION
  *****************************************************************************************
  */
+#ifdef APP_DRIVER_WAKEUP_CALL_FUN
 extern void i2c_wake_up(app_i2c_id_t id);
+#endif
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -152,7 +154,9 @@ extern i2c_env_t *p_i2c_env[APP_I2C_ID_MAX];
  */
 static uint16_t app_i2c_config_dma_tx(app_i2c_params_t *p_params)
 {
-    app_dma_params_t tx_dma_params = { 0 };
+    app_dma_params_t tx_dma_params = {
+        .p_instance = NULL,
+    };
 
     tx_dma_params.p_instance                 = p_params->dma_cfg.tx_dma_instance;
     tx_dma_params.channel_number             = p_params->dma_cfg.tx_dma_channel;
@@ -195,7 +199,9 @@ static uint16_t app_i2c_config_dma_tx(app_i2c_params_t *p_params)
 
 static uint16_t app_i2c_config_dma_rx(app_i2c_params_t *p_params)
 {
-    app_dma_params_t rx_dma_params = { 0 };
+    app_dma_params_t rx_dma_params = {
+        .p_instance = NULL,
+    };
 
     rx_dma_params.p_instance                 = p_params->dma_cfg.rx_dma_instance;
     rx_dma_params.channel_number             = p_params->dma_cfg.rx_dma_channel;
@@ -371,6 +377,7 @@ uint16_t app_i2c_dma_receive_async(app_i2c_id_t id, uint16_t target_address, uin
                 break;
 
             default:
+                // Nothing to do.
                 break;
         }
 
@@ -429,6 +436,7 @@ uint16_t app_i2c_dma_transmit_async(app_i2c_id_t id, uint16_t target_address, ui
                 break;
 
             default:
+                // Nothing to do.
                 break;
         }
 

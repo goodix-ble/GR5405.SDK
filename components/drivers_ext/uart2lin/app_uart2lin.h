@@ -1,7 +1,12 @@
-#ifndef __APP_UART2LIN_H__
-#define __APP_UART2LIN_H__
+#ifndef APP_UART2LIN_H
+#define APP_UART2LIN_H
 
 #include "app_uart.h"
+
+//lint -e755 [advisory] global macro 'xxx' not referenced
+//lint -e756 [advisory] global typedef 'xxx' not referenced
+//lint -e769 [info] global enumeration constant 'xxx' not referenced
+//lint -e759 [Info] header declaration for symbol 'xxx' defined at 'xxx' could be moved from header to module
 
 // Min rsp timeout = (1 * 1000000 / s_uart_params.init.baud_rate * 10 * (APP_UART2LIN_DATA_LEN + APP_UART2LIN_CHECKSUM_LEN)) * 1.4
 // baud_rate = 20000 bps
@@ -25,39 +30,39 @@
 typedef enum
 {
     APP_UART2LIN_MODE_MASTER = 0U,
-    APP_UART2LIN_MODE_SLAVE  = 1U,
+    APP_UART2LIN_MODE_SLAVE  = 1U
 } app_uart2lin_mode_t;
 
 typedef enum
 {
     APP_UART2LIN_SOFTWARE_TIMER = 0U,
-    APP_UART2LIN_HARDWARE_TIMER = 1U,   // The hardware timer defaults to using dual_timer_1.
+    APP_UART2LIN_HARDWARE_TIMER = 1U    // The hardware timer defaults to using dual_timer_1.
 } app_uart2lin_timer_type_t;
 
 typedef enum
 {
     APP_UART2LIN_INIT_NO_READY = 0U,
-    APP_UART2LIN_INIT_READY    = 1U,
+    APP_UART2LIN_INIT_READY    = 1U
 } app_uart2lin_init_state_t;
 
 typedef enum
 {
     APP_UART2LIN_RX_HEAD     = 0U,
     APP_UART2LIN_RX_RESPONSE = 1U,
-    APP_UART2LIN_RX_IDLE     = 0xFFU,
+    APP_UART2LIN_RX_IDLE     = 0xFFU
 } app_uart2lin_rx_type_t;
 
 typedef enum
 {
     APP_UART2LIN_TX_HEAD     = 0U,
     APP_UART2LIN_TX_RESPONSE = 1U,
-    APP_UART2LIN_TX_IDLE     = 0xFFU,
+    APP_UART2LIN_TX_IDLE     = 0xFFU
 } app_uart2lin_tx_type_t;
 
 typedef enum
 {
     APP_UART2LIN_CHECK_ENHANCE_UNSUPPORT = 0U,    // LIN Version <= LIN 1.3.
-    APP_UART2LIN_CHECK_ENHANCE_SUPPORT   = 1U,    // LIN Version >= LIN 2.0.
+    APP_UART2LIN_CHECK_ENHANCE_SUPPORT   = 1U     // LIN Version >= LIN 2.0.
 } app_uart2lin_check_t;
 
 typedef enum
@@ -67,7 +72,7 @@ typedef enum
     APP_UART2LIN_BAUD_4800  = 4800U,
     APP_UART2LIN_BAUD_9600  = 9600U,
     APP_UART2LIN_BAUD_19200 = 19200U,
-    APP_UART2LIN_BAUD_20000 = 20000U,
+    APP_UART2LIN_BAUD_20000 = 20000U
 } app_uart2lin_baudrate_t;
 
 typedef enum
@@ -75,7 +80,7 @@ typedef enum
     APP_UART2LIN_BRK_LEN_13 = 13U,
     APP_UART2LIN_BRK_LEN_14 = 14U,
     APP_UART2LIN_BRK_LEN_15 = 15U,
-    APP_UART2LIN_BRK_LEN_16 = 16U,
+    APP_UART2LIN_BRK_LEN_16 = 16U
 } app_uart2lin_brk_len_t;
 
 typedef enum
@@ -88,6 +93,7 @@ typedef enum
     APP_UART2LIN_ERROR_TIMEOUT           = 0x10U,
     APP_UART2LIN_ERROR_INCOMPLETE_DATA   = 0x20U,
     APP_UART2LIN_ERROR_BIT_ERROR         = 0x40U,
+    APP_UART2LIN_ERROR_RX_HEAD_STOP      = 0x80U
 } app_uart2lin_error_code_t;
 
 /**
@@ -117,6 +123,7 @@ typedef struct
 typedef struct
 {
     bool is_timeout;                                                      /**< Whether the response reception timed out. */
+    bool is_timer_active;                                                 /**< Whether the timer for monitoring response timeout is activated. */
     app_uart2lin_init_state_t init_state;                                 /**< UART2LIN init state. */
     app_uart2lin_mode_t lin_mode;                                         /**< UART2LIN mode. */
     app_uart2lin_timer_type_t timer_type;                                 /**< Timer type. */
@@ -244,6 +251,17 @@ void app_uart2lin_abort_tx(void);
 
 /**
  ****************************************************************************************
+ * @brief  Send LIN wakeup signal.
+ * @note   LIN wakeup signal: low_level_duration us low level + 150ms high level.
+ *
+ * @param[in]  low_level_duration: Low-level duration of the wakeup signal. Unit: us. Recommended value is 250us ~ 5ms.
+ *
+ ****************************************************************************************
+ */
+void app_uart2lin_wakeup(uint32_t low_level_duration);
+
+/**
+ ****************************************************************************************
  * @brief  UART2LIN rx head cb.
  * @note   This function should not be modified. When the callback is needed,
  *         the app_uart2lin_rx_head_cb can be implemented in the user file.
@@ -296,4 +314,4 @@ void app_uart2lin_error_cb(app_uart2lin_env_t *p_uart2lin);
 }
 #endif
 
-#endif /* __APP_UART2LIN_H__ */
+#endif /* APP_UART2LIN_H */

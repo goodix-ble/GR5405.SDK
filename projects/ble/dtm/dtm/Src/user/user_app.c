@@ -59,7 +59,6 @@ void ble_evt_handler(const ble_evt_t *p_evt)
     {
         case BLE_COMMON_EVT_STACK_INIT:
             ble_hci_stack_init_handle();
-            app_assert_init();
             break;
     }
 }

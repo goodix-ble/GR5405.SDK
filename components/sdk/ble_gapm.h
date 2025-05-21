@@ -131,18 +131,9 @@
 #define BLE_APPEARANCE_OUTDOOR_SPORTS_ACT_LOC_POD          5187     /**< Location Pod (Outdoor Sports Activity subtype). */
 #define BLE_APPEARANCE_OUTDOOR_SPORTS_ACT_LOC_AND_NAV_POD  5188     /**< Location and Navigation Pod (Outdoor Sports Activity subtype). */
 
-/**@defgroup BLE_GAP_PHYS GAP PHYs (bitmask)
- * @{ */
-#define BLE_GAP_PHY_ANY       0x00     /**< No preferred PHY. */
-#define BLE_GAP_PHY_LE_1MBPS  (1 << 0) /**< LE 1M PHY preferred for an active link. */
-#define BLE_GAP_PHY_LE_2MBPS  (1 << 1) /**< LE 2M PHY preferred for an active link. */
-#define BLE_GAP_PHY_LE_CODED  (1 << 2) /**< LE Coded PHY preferred for an active link. */
-/**@} */
-
-
 /**@defgroup BLE_GAP_ADV_CHANNEL GAP ADV CHANNEL (bitmask)
  * @{ */
-#define BLE_GAP_ADV_CHANNEL_37              0x01 /**< Advertising Channel 37 (2402MHz). */ 
+#define BLE_GAP_ADV_CHANNEL_37              0x01 /**< Advertising Channel 37 (2402MHz). */
 #define BLE_GAP_ADV_CHANNEL_38              0x02 /**< Advertising Channel 38 (2426MHz). */
 #define BLE_GAP_ADV_CHANNEL_39              0x04 /**< Advertising Channel 39 (2480MHz). */
 #define BLE_GAP_ADV_CHANNEL_37_38_39        0x07 /**< Advertising Channel 37, 38, 39. */
@@ -428,6 +419,17 @@ typedef enum
 } ble_gap_per_sync_type_t;
 
 /**
+ * @brief Auto add white list policy types
+ */
+typedef enum
+{
+    BLE_GAP_AUTO_ADD_WHITE_LIST_ALL_ROLE = 0, /**< Auto add white list after bonding with master and slave role. */
+    BLE_GAP_AUTO_ADD_WHITE_LIST_WITH_MASTER,  /**< Auto add white list after bonding with master role. */
+    BLE_GAP_AUTO_ADD_WHITE_LIST_WITH_SLAVE,   /**< Auto add white list after bonding with slave role. */
+    BLE_GAP_AUTO_ADD_WHITE_LIST_NONE          /**< Not auto add white list after bonding. */
+} ble_gap_auto_add_white_list_policy_type_t;
+
+/**
  * @brief Constant Tone Extension sync filtering type
  */
 enum gap_sync_cte_type
@@ -546,9 +548,9 @@ typedef enum
  */
 typedef enum
 {
-    BLE_GAP_ACTIVITY_ROLE_ADV = 0,          /**< Adertise role. */
+    BLE_GAP_ACTIVITY_ROLE_ADV = 0,          /**< Advertise role. */
     BLE_GAP_ACTIVITY_ROLE_CON = 1,          /**< Connect role. */
-    BLE_GAP_ACTIVITY_ROLE_SCAN_INIT = 2,    /**< Scann role. */
+    BLE_GAP_ACTIVITY_ROLE_SCAN_INIT = 2,    /**< Scan/Init role. */
     BLE_GAP_ACTIVITY_ROLE_UNKNOWN = 0xf,    /**< Unknown role. */
 } ble_gap_actv_role_t;
 
@@ -580,8 +582,9 @@ typedef struct
     uint16_t         adv_intv_max;    /**< Maximum advertising interval (in unit of 625 us). Must be greater than 20 ms. */
     uint8_t          chnl_map;        /**< Advertising channel map. See @ref BLE_GAP_ADV_CHANNEL. */
     bool             scan_req_ind_en; /**< Indicate if the application should be informed when receiving a scan request from the scanner. */
-    int8_t           max_tx_pwr;      /**< Maximum power level at which the advertising packets have to be transmitted (between -127 dBm and 127 dBm).
-                                           For the real value, please refer to GR5xx Datasheet. */
+    int8_t           max_tx_pwr;      /**< Tx power, unit(dBm).
+                                           BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5].
+                                           BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]. */
 } ble_gap_adv_param_t;
 
 /**
@@ -909,7 +912,8 @@ typedef struct
 /** @brief Identity address report event for @ref BLE_GAPM_EVT_IDEN_ADDR_REPORT. */
 typedef struct
 {
-    ble_gap_bdaddr_t iden_addr;      /**< Identity address info. */
+    ble_gap_bdaddr_t iden_addr;                 /**< Identity address info. */
+    uint8_t          irk[BLE_GAP_MAX_KEY_LEN];  /**< Irk info. */
 } ble_gap_evt_iden_addr_report_t;
 
 typedef struct
@@ -975,14 +979,16 @@ uint16_t ble_gap_addr_get(ble_gap_bdaddr_t *p_addr);
 
 /**
  ****************************************************************************************
- * @brief Set the tx power
+ * @brief Set the tx power.
  *
  * @param[in] role: Select the role to set tx power. @ref ble_gap_actv_role_t for possible roles.
  * @param[in] index: The idx parameter is interpreted on role.
  *              -If role is @ref BLE_GAP_ACTIVITY_ROLE_ADV, it's the index of Advertising.
  *              -If role is @ref BLE_GAP_ACTIVITY_ROLE_CON, it's the index of connection.
  *              -For all other roles, it should be ignored.
- * @param[in] txpwr_dbm: The value of the tx power, Range: -127dbm to 127dbm.
+ * @param[in] txpwr_dbm: Tx power, unit(dBm).
+ *                       BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5]
+ *                       BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
  *
  * @retval SDK_SUCCESS: Operation is Success.
  * @retval SDK_ERR_INVALID_CONN_IDX: Invalid connection index supplied.
@@ -994,14 +1000,16 @@ uint16_t ble_gap_tx_power_set(ble_gap_actv_role_t role, uint8_t index, int8_t tx
 
 /**
  ****************************************************************************************
- * @brief Get the tx power
+ * @brief Get the tx power.
  *
  * @param[in] role: Select the role to Get tx power. @ref ble_gap_actv_role_t for possible roles.
  * @param[in] index: The idx parameter is interpreted on role.
  *                   If role is @ref BLE_GAP_ACTIVITY_ROLE_ADV, it's the index of Advertising.
  *                   If role is @ref BLE_GAP_ACTIVITY_ROLE_CON, it's the index of connection.
  *                   For all other roles, it should be ignored.
- * @param[in] txpwr_dbm: The value of the tx power, Range: -127dbm to 128dbm.
+ * @param[out] txpwr_dbm: Tx power, unit(dBm).
+ *                        BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5]
+ *                        BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
  *
  * @retval SDK_SUCCESS: Operation is Success.
  * @retval SDK_ERR_INVALID_CONN_IDX: Invalid connection index supplied.
@@ -1010,6 +1018,30 @@ uint16_t ble_gap_tx_power_set(ble_gap_actv_role_t role, uint8_t index, int8_t tx
  ****************************************************************************************
  */
 uint16_t ble_gap_tx_power_get(ble_gap_actv_role_t role, uint8_t index, int8_t *txpwr_dbm);
+
+/**
+ ****************************************************************************************
+ * @brief Set the default tx power for connection.
+ *
+ * @param[in] txpwr_dbm: Tx power, unit(dBm).
+ *                       BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5]
+ *                       BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+ *
+ ****************************************************************************************
+ */
+void ble_gap_default_conn_tx_power_set(int8_t txpwr_dbm);
+
+/**
+ ****************************************************************************************
+ * @brief Get the default tx power for connection.
+ *
+ * @param[out] txpwr_dbm: Tx power, unit(dBm).
+ *                        BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5]
+ *                        BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+ *
+ ****************************************************************************************
+ */
+void ble_gap_default_conn_tx_power_get(int8_t *txpwr_dbm);
 
 /**
  ****************************************************************************************
@@ -1070,8 +1102,8 @@ uint16_t ble_gap_l2cap_params_set(uint16_t max_mtu,uint16_t max_mps,uint8_t max_
  ****************************************************************************************
  * @brief Set the preferred values for the transmitter PHY and receiver PHY.
  *
- * @param[in] tx_pref_phy: A bit field that indicates the transmitter PHYs that the Host prefers the Controller to use(see @ref BLE_GAP_PHYS).
- * @param[in] rx_pref_phy: A bit field that indicates the receiver PHYs that the Host prefers the Controller to use(see @ref BLE_GAP_PHYS).
+ * @param[in] tx_pref_phy: A bit field that indicates the transmitter PHYs that the Host prefers the Controller to use(see @ref ble_gap_phy_bit_t).
+ * @param[in] rx_pref_phy: A bit field that indicates the receiver PHYs that the Host prefers the Controller to use(see @ref ble_gap_phy_bit_t).
  ****************************************************************************************
  */
 void ble_gap_pref_phy_set(uint8_t tx_pref_phy, uint8_t rx_pref_phy);
@@ -1157,6 +1189,16 @@ uint16_t ble_gap_bond_devs_clear(void);
  ****************************************************************************************
  */
 uint16_t ble_gap_bond_dev_del(const ble_gap_bdaddr_t *p_peer_addr);
+
+/**
+ ****************************************************************************************
+ * @brief Check white list is full.
+ *
+ * @retval TRUE: white list is full.
+ * @retval FALSE: white list is not full.
+ ****************************************************************************************
+ */
+bool ble_gap_check_whitelist_full(void);
 
 /**
  ****************************************************************************************
@@ -1763,6 +1805,21 @@ uint16_t ble_gap_reslv_rpa_addr(uint8_t *p_rpa);
 
 /**
  *****************************************************************************************
+ * @brief  Resolve the rpa address with irk indicated by app layer.
+ *
+ * @param[in] p_rpa: Pointer to the rpa address.
+ * @param[in] p_irk: Pointer to the irk.
+ *
+ * @retval ::SDK_SUCCESS: Operation is Success.
+ * @retval ::SDK_ERR_INVALID_PARAM: Invalid parameter supplied.
+ * @retval ::SDK_ERR_POINTER_NULL: Invalid pointer supplied.
+ * @retval ::SDK_ERR_DISALLOWED: Operation is disallowed.
+ *****************************************************************************************
+ */
+uint16_t ble_gap_reslv_rpa_addr_by_irk(uint8_t *p_rpa, uint8_t *p_irk);
+
+/**
+ *****************************************************************************************
  * @brief  Add rpa list.
  *
  * @param[in] p_peer_iden_addr: Pointer to the peer identity address.
@@ -1778,6 +1835,37 @@ uint16_t ble_gap_reslv_rpa_addr(uint8_t *p_rpa);
  */
 uint16_t ble_gap_rpa_list_add(ble_gap_bdaddr_t *p_peer_iden_addr, uint8_t *p_peer_irk);
 
+/**
+ *****************************************************************************************
+ * @brief  Get adv data and scan rsp data from hardware buffer.
+ *
+ * @param[in] adv_idx: Adv index.
+ * @param[in] p_adv_data: Pointer to the adv data buffer.
+ * @param[inout] p_adv_data_len: Pointer to the adv data length.
+ * @param[in] p_scan_rsp_data: Pointer to the scan response data.
+ * @param[inout] p_scan_rsp_data_len: Pointer to the scan response data length.
+ *
+ * @note p_adv_data_len and p_scan_rsp_data_len explanation as follows:
+ *       as input parameter: indicate the max length for data buffer, should not less than 31.
+ *       as output parameter: indicate the actual data length.
+ *
+ * @retval ::SDK_SUCCESS: Operation is Success.
+ * @retval ::SDK_ERR_INVALID_ADV_IDX: Invalid advertising index supplied.
+ * @retval ::SDK_ERR_POINTER_NULL: Invalid pointer supplied.
+ * @retval ::SDK_ERR_DISALLOWED: Operation is disallowed.
+ *****************************************************************************************
+ */
+uint16_t ble_gap_hw_adv_data_get(uint8_t adv_idx, uint8_t *p_adv_data, uint16_t *p_adv_data_len, uint8_t *p_scan_rsp_data, uint16_t *p_scan_rsp_data_len);
+
+/**
+ *****************************************************************************************
+ * @brief Set auto add white list policy after bonding.
+ *
+ * @param[in] policy_type: Policy type @ref ble_gap_auto_add_white_list_policy_type_t.
+ *
+ *****************************************************************************************
+ */
+void ble_gap_white_list_auto_add_policy_set(ble_gap_auto_add_white_list_policy_type_t policy_type);
 /** @} */
 
 #endif

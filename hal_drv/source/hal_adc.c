@@ -77,8 +77,8 @@ static hal_status_t adc_try_swtoken_locked_until_timeout(adc_handle_t *p_adc, ui
 static error_status_t hal_adc_try_set_clock(uint32_t clk);
 
 static void adc_set_device_state(adc_handle_t *p_adc ,hal_adc_state_t state);
-static error_status_t hal_adc_get_slope_offset(adc_handle_t *hadc, adc_param_t *p_param);
-static uint16_t diff_calculate_offset(adc_handle_t *hadc);
+static error_status_t hal_adc_get_slope_offset(adc_handle_t *p_adc, adc_param_t *p_param);
+static uint16_t diff_calculate_offset(adc_handle_t *p_adc);
 void filter_adc_data(uint32_t clock);
 static uint32_t diff_int_vref   = 0;
 static uint16_t diff_int_offset = 0;
@@ -780,12 +780,12 @@ init_flag=true: use in init function or deinit function
 init_flag=fault: not use in init function or deinit function
  ****************************************************************************************
  */
-void hal_adc_voltage_intern(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen)
+void hal_adc_voltage_intern(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen)
 {
     double cslope = 0.0, coffset = 0.0;
     adc_param_t adc_param = {0};
     //lint -e934 Taking address of near auto variable is necessary
-    if(hal_adc_get_slope_offset(hadc, &adc_param) != SUCCESS)
+    if(hal_adc_get_slope_offset(p_adc, &adc_param) != SUCCESS)
     {
         return;
     }
@@ -795,36 +795,36 @@ void hal_adc_voltage_intern(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf,
         cslope = (-1.0) * (double)adc_param.slope;
     }
 
-    if (ADC_INPUT_SINGLE == hadc->init.input_mode)
+    if (ADC_INPUT_SINGLE == p_adc->init.input_mode)
     {
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = ((double)inbuf[i] - coffset) / cslope;
+            p_outbuf[i] = ((double)p_inbuf[i] - coffset) / cslope;
         }
     }
     else
     {
-        if (diff_int_vref != hadc->init.ref_value)
+        if (diff_int_vref != p_adc->init.ref_value)
         {
-            diff_int_vref = hadc->init.ref_value;
-            diff_int_offset = diff_calculate_offset(hadc);
+            diff_int_vref = p_adc->init.ref_value;
+            diff_int_offset = diff_calculate_offset(p_adc);
         }
         coffset = (double)diff_int_offset;
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = (coffset - ((double)inbuf[i] * 2.0)) / cslope;
+            p_outbuf[i] = (coffset - ((double)p_inbuf[i] * 2.0)) / cslope;
         }
     }
 
     return;
 }
 
-void hal_adc_voltage_extern(adc_handle_t *hadc, double vref, uint16_t *inbuf, double *outbuf, uint32_t buflen)
+void hal_adc_voltage_extern(adc_handle_t *p_adc, double vref, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen)
 {
     double cslope = 0.0, coffset = 0.0;
     adc_param_t adc_param = {0};
     //lint -e934 Taking address of near auto variable is necessary
-    if(hal_adc_get_slope_offset(hadc, &adc_param) != SUCCESS)
+    if(hal_adc_get_slope_offset(p_adc, &adc_param) != SUCCESS)
     {
         return;
     }
@@ -834,11 +834,11 @@ void hal_adc_voltage_extern(adc_handle_t *hadc, double vref, uint16_t *inbuf, do
         cslope = (-1.0) * (double)adc_param.slope * 1.0f / vref;
     }
 
-    if (ADC_INPUT_SINGLE == hadc->init.input_mode)
+    if (ADC_INPUT_SINGLE == p_adc->init.input_mode)
     {
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = ((double)inbuf[i] - coffset) / cslope;
+            p_outbuf[i] = ((double)p_inbuf[i] - coffset) / cslope;
         }
     }
     else
@@ -846,26 +846,26 @@ void hal_adc_voltage_extern(adc_handle_t *hadc, double vref, uint16_t *inbuf, do
         if (fabs(diff_ext_vref - vref) > 0.00001)
         {
             diff_ext_vref = vref;
-            diff_ext_offset = diff_calculate_offset(hadc);
+            diff_ext_offset = diff_calculate_offset(p_adc);
         }
         coffset = (double)diff_ext_offset;
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = (coffset - ((double)inbuf[i] * 2.0)) / cslope;
+            p_outbuf[i] = (coffset - ((double)p_inbuf[i] * 2.0)) / cslope;
         }
     }
 
     return;
 }
 
-void hal_adc_temperature_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen)
+void hal_adc_temperature_conv(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen)
 {
     double adc_temp_slope = 0.0;
     double adc_temp_offset = 0.0;
     double adc_temp_ref = 0.0;
     adc_param_t adc_param = {0};
     //lint -e934 Taking address of near auto variable is necessary
-    if(hal_adc_get_slope_offset(hadc, &adc_param) != SUCCESS)
+    if(hal_adc_get_slope_offset(p_adc, &adc_param) != SUCCESS)
     {
         return;
     }
@@ -878,18 +878,18 @@ void hal_adc_temperature_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbu
 
     for (uint32_t i = 0; i < buflen; i++)
     {
-        outbuf[i] = ((((double)inbuf[i] - adc_temp_offset) / (adc_temp_slope*2.0)) / (-0.00195)) + adc_temp_ref;
+        p_outbuf[i] = ((((double)p_inbuf[i] - adc_temp_offset) / (adc_temp_slope*2.0)) / (-0.00195)) + adc_temp_ref;
     }
 }
 
-void hal_adc_vbat_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen)
+void hal_adc_vbat_conv(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen)
 {
     double adc_vbat_slope = 0.0;
     double adc_vbat_offset = 0.0;
     double adc_vbat_div = 0.0;
     adc_param_t adc_param = {0};
 
-    if(hal_adc_get_slope_offset(hadc, &adc_param) != SUCCESS)
+    if(hal_adc_get_slope_offset(p_adc, &adc_param) != SUCCESS)
     {
         return;
     }
@@ -904,14 +904,14 @@ void hal_adc_vbat_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint
     {
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = (((double)inbuf[i] - adc_vbat_offset) / adc_vbat_slope) * (525.0 / 136.0);
+            p_outbuf[i] = (((double)p_inbuf[i] - adc_vbat_offset) / adc_vbat_slope) * (525.0 / 136.0);
         }
     }
     else if (ADC_DIFF_CALI_MODE == adc_param.cali_mode)
     {
         for (uint32_t i = 0; i < buflen; i++)
         {
-            outbuf[i] = ((((double)inbuf[i] - adc_vbat_offset) / adc_vbat_slope) * adc_vbat_div) / 100.0;
+            p_outbuf[i] = ((((double)p_inbuf[i] - adc_vbat_offset) / adc_vbat_slope) * adc_vbat_div) / 100.0;
         }
     }
     else
@@ -920,7 +920,7 @@ void hal_adc_vbat_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint
     }
 }
 
-static error_status_t hal_adc_get_slope_offset(adc_handle_t *hadc, adc_param_t *p_param)
+static error_status_t hal_adc_get_slope_offset(adc_handle_t *p_adc, adc_param_t *p_param)
 {
     adc_trim_info_t adc_trim;
 
@@ -932,16 +932,16 @@ static error_status_t hal_adc_get_slope_offset(adc_handle_t *hadc, adc_param_t *
     p_param->cali_mode = adc_trim.cali_mode;
     p_param->vbat_div = adc_trim.adc_vbat_div;
     p_param->temp_ref = adc_trim.adc_temp_ref;
-    if(ADC_REF_SRC_BUF_INT != hadc->init.ref_source)
+    if(ADC_REF_SRC_BUF_INT != p_adc->init.ref_source)
     {
         p_param->offset = adc_trim.offset_ext_1p0;
         p_param->slope  = adc_trim.slope_ext_1p0;
     }
     else
     {
-        if (ADC_REF_VALUE_0P8 == hadc->init.ref_value)
+        if (ADC_REF_VALUE_0P8 == p_adc->init.ref_value)
         {
-            if(ADC_INPUT_SRC_TMP == hadc->init.channel_n)
+            if(ADC_INPUT_SRC_TMP == p_adc->init.channel_n)
             {
                 p_param->offset = adc_trim.adc_temp;
             }
@@ -951,17 +951,17 @@ static error_status_t hal_adc_get_slope_offset(adc_handle_t *hadc, adc_param_t *
             }
             p_param->slope  = adc_trim.slope_int_0p8;
         }
-        else if (ADC_REF_VALUE_1P2 == hadc->init.ref_value)
+        else if (ADC_REF_VALUE_1P2 == p_adc->init.ref_value)
         {
             p_param->offset = adc_trim.offset_int_1p2;
             p_param->slope  = adc_trim.slope_int_1p2;
         }
-        else if (ADC_REF_VALUE_1P6 == hadc->init.ref_value)
+        else if (ADC_REF_VALUE_1P6 == p_adc->init.ref_value)
         {
             p_param->offset = adc_trim.offset_int_1p6;
             p_param->slope  = adc_trim.slope_int_1p6;
         }
-        else if (ADC_REF_VALUE_2P0 == hadc->init.ref_value)
+        else if (ADC_REF_VALUE_2P0 == p_adc->init.ref_value)
         {
             p_param->offset = adc_trim.offset_int_2p0;
             p_param->slope  = adc_trim.slope_int_2p0;
@@ -975,26 +975,26 @@ static error_status_t hal_adc_get_slope_offset(adc_handle_t *hadc, adc_param_t *
     return SUCCESS;
 }
 
-static uint16_t diff_calculate_offset(adc_handle_t *hadc)
+static uint16_t diff_calculate_offset(adc_handle_t *p_adc)
 {
     uint32_t sum = 0;
     uint16_t conversion[ADC_UNUSED_CONV_LENGTH + ADC_USED_CONV_LENGTH];
 
-    uint32_t adc_channel_n = hadc->init.channel_n;
-    uint32_t adc_channel_p = hadc->init.channel_p;
-    hadc->init.channel_n = ADC_INPUT_SRC_REF;
-    hadc->init.channel_p = ADC_INPUT_SRC_REF;
+    uint32_t adc_channel_n = p_adc->init.channel_n;
+    uint32_t adc_channel_p = p_adc->init.channel_p;
+    p_adc->init.channel_n = ADC_INPUT_SRC_REF;
+    p_adc->init.channel_p = ADC_INPUT_SRC_REF;
 
-    if(HAL_OK != hal_adc_deinit(hadc))
+    if(HAL_OK != hal_adc_deinit(p_adc))
     {
         return 0;
     }
-    if(HAL_OK != hal_adc_init(hadc))
+    if(HAL_OK != hal_adc_init(p_adc))
     {
         return 0;
     }
     //lint -e934 Taking address of near auto variable is necessary
-    if(hal_adc_poll_for_conversion(hadc, conversion, ADC_UNUSED_CONV_LENGTH + ADC_USED_CONV_LENGTH))
+    if(hal_adc_poll_for_conversion(p_adc, conversion, ADC_UNUSED_CONV_LENGTH + ADC_USED_CONV_LENGTH))
     {
         return 0;
     }
@@ -1003,14 +1003,14 @@ static uint16_t diff_calculate_offset(adc_handle_t *hadc)
         sum += conversion[i];
     }
     uint16_t conversion_avg = (uint16_t)(sum / ADC_USED_CONV_LENGTH);
-    hadc->init.channel_n = adc_channel_n;
-    hadc->init.channel_p = adc_channel_p;
+    p_adc->init.channel_n = adc_channel_n;
+    p_adc->init.channel_p = adc_channel_p;
 
-    if(HAL_OK != hal_adc_deinit(hadc))
+    if(HAL_OK != hal_adc_deinit(p_adc))
     {
         return 0;
     }
-    if(HAL_OK != hal_adc_init(hadc))
+    if(HAL_OK != hal_adc_init(p_adc))
     {
         return 0;
     }

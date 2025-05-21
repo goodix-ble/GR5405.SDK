@@ -97,7 +97,7 @@ static const uint8_t s_adv_rsp_data_set[] =
 };
 
 
-/**@brief Default UART init configuretion definition. */
+/**@brief Default UART init configuration definition. */
 #define DFU_UART_DEFAULT_CONFIG               \
 {                                             \
     .state     = DFU_INFO_ENABLE,             \
@@ -179,7 +179,7 @@ static void app_disconnected_handler(uint8_t conn_idx, uint8_t reason)
     sdk_err_t error_code;
     APP_LOG_INFO("Disconnected (0x%02X).", reason);
 
-    error_code = ble_gap_adv_start(conn_idx, &s_gap_adv_time_param);
+    error_code = ble_gap_adv_start(0, &s_gap_adv_time_param);
     APP_ERROR_CHECK(error_code);
 }
 

@@ -624,61 +624,61 @@ void hal_pm_adc_resume(adc_handle_t *p_adc);
  ****************************************************************************************
  * @brief  Convert the ADC conversion results to a voltage value(internal reference).
  *
- * @param[in]  hadc: Pointer to a ADC handle which contains the configuration information for
+ * @param[in]  p_adc: Pointer to a ADC handle which contains the configuration information for
  *                    the specified ADC module.
- * @param[in]  inbuf: Pointer to data buffer which storage ADC conversion results.
- * @param[out] outbuf: Pointer to data buffer which to storage voltage results.
+ * @param[in]  p_inbuf: Pointer to data buffer which storage ADC conversion results.
+ * @param[out] p_outbuf: Pointer to data buffer which to storage voltage results.
  * @param[in]  buflen: Length of data buffer.
  *
  * @return Result of operation.
  ****************************************************************************************
  */
-void hal_adc_voltage_intern(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen);
+void hal_adc_voltage_intern(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen);
 
 /**
  ****************************************************************************************
  * @brief  Convert the ADC conversion results to a voltage value(external reference).
  *
- * @param[in]  hadc: Pointer to a ADC handle which contains the configuration information for
+ * @param[in]  p_adc: Pointer to a ADC handle which contains the configuration information for
  *                    the specified ADC module.
  * @param[in]  vref: external reference value of ADC.
- * @param[in]  inbuf: Pointer to data buffer which storage ADC conversion results.
- * @param[out] outbuf: Pointer to data buffer which to storage voltage results.
+ * @param[in]  p_inbuf: Pointer to data buffer which storage ADC conversion results.
+ * @param[out] p_outbuf: Pointer to data buffer which to storage voltage results.
  * @param[in]  buflen: Length of data buffer.
  *
  * @return Result of operation.
  ****************************************************************************************
  */
-void hal_adc_voltage_extern(adc_handle_t *hadc, double vref, uint16_t *inbuf, double *outbuf, uint32_t buflen);
+void hal_adc_voltage_extern(adc_handle_t *p_adc, double vref, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen);
 
 /**
  ****************************************************************************************
  * @brief  Convert the ADC conversion results to temperature value.
  *
- * @param[in]  hadc: Pointer to a ADC handle which contains the configuration information for
+ * @param[in]  p_adc: Pointer to a ADC handle which contains the configuration information for
  *                    the specified ADC module.
- * @param[in]  inbuf: Pointer to data buffer which storage ADC codes.
- * @param[out] outbuf: Pointer to data buffer which to storage conversion results.
+ * @param[in]  p_inbuf: Pointer to data buffer which storage ADC codes.
+ * @param[out] p_outbuf: Pointer to data buffer which to storage conversion results.
  * @param[in]  buflen: Length of data buffer.
  *
  * @return Result of operation.
  ****************************************************************************************/
-void hal_adc_temperature_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen);
+void hal_adc_temperature_conv(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen);
 
 /**
  ****************************************************************************************
  * @brief  Convert the ADC conversion results to battery value.
  *
- * @param[in]  hadc: Pointer to a ADC handle which contains the configuration information for
+ * @param[in]  p_adc: Pointer to a ADC handle which contains the configuration information for
  *                    the specified ADC module.
- * @param[in]  inbuf: Pointer to data buffer which storage ADC codes.
- * @param[out] outbuf: Pointer to data buffer which to storage conversion results.
+ * @param[in]  p_inbuf: Pointer to data buffer which storage ADC codes.
+ * @param[out] p_outbuf: Pointer to data buffer which to storage conversion results.
  * @param[in]  buflen: Length of data buffer.
  *
  * @return Result of operation.
  ****************************************************************************************
  */
-void hal_adc_vbat_conv(adc_handle_t *hadc, uint16_t *inbuf, double *outbuf, uint32_t buflen);
+void hal_adc_vbat_conv(adc_handle_t *p_adc, uint16_t *p_inbuf, double *p_outbuf, uint32_t buflen);
 
 /** @} */
 

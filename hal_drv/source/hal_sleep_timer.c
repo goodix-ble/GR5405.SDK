@@ -143,7 +143,14 @@ __WEAK uint32_t hal_sleep_timer_get_reload_value(void)
 
 __WEAK uint32_t hal_sleep_timer_get_current_value(void)
 {
-    return ll_sleep_timer_get_counter_int_value(SLP_TIMER0);
+    if (ll_sleep_timer_is_counting(SLP_TIMER0))
+    {
+        return ll_sleep_timer_get_counter_int_value(SLP_TIMER0);
+    }
+    else
+    {
+        return HAL_SLP_TIMER_OVERFLOW_VALUE;
+    }
 }
 
 __WEAK uint32_t hal_sleep_timer_get_clock_freq(void)

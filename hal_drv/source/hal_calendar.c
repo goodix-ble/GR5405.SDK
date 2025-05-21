@@ -51,7 +51,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
-#define CALENDAR_ABS(MAX_C, X, Y)               ((X) - (Y))
+#define CALENDAR_ABS(X, Y)                      ((X) - (Y))
 #define CALENDAR_DIF(X, Y)                      (((X) >= (Y)) ? ((X) - (Y)) : ((Y) - (X)))
 
 #define CALENDAR_FIRST_MONTH                    (1UL)
@@ -63,10 +63,10 @@
 #define CALENDAR_CLOCK(SECOND)                  (SECOND)
 #define CALENDAR_TICKS_PER_MS(SECOND)           ((CALENDAR_CLOCK(SECOND) / 1000.0f))
 #define CALENDAR_TICKS_PER_DAY(SECOND)          ((CALENDAR_SECONDS_PER_DAY) * (CALENDAR_CLOCK(SECOND)))
-#define CALENDAR_TICKS_PER_WARP                 (0x100000000UL)
-#define CALENDAR_SECONDS_PER_WARP(SECOND)       ((CALENDAR_TICKS_PER_WARP) / (CALENDAR_CLOCK(SECOND)))
-#define CALENDAR_WARPCNT_MAX                    (0x0UL)
-#define CALENDAR_SECONDS_WARPCNT_OVER(SECOND)   ((CALENDAR_WARPCNT_MAX + 1) * (CALENDAR_SECONDS_PER_WARP(CALENDAR_CLOCK(SECOND))))
+#define CALENDAR_TICKS_PER_WRAP                 (0x100000000UL)
+#define CALENDAR_SECONDS_PER_WRAP(SECOND)       ((CALENDAR_TICKS_PER_WRAP) / (CALENDAR_CLOCK(SECOND)))
+#define CALENDAR_WRAPCNT_MAX                    (0x0UL)
+#define CALENDAR_SECONDS_WRAPCNT_OVER(SECOND)   ((CALENDAR_WRAPCNT_MAX + 1) * (CALENDAR_SECONDS_PER_WRAP(CALENDAR_CLOCK(SECOND))))
 
 #define CALENDAR_ALARM_DATE                     0x01U
 #define CALENDAR_ALARM_TICK                     0x02U
@@ -122,7 +122,7 @@ __WEAK hal_status_t hal_calendar_init(calendar_handle_t *p_calendar)
             {
                 break;
             }
-        } while(--wait_count);
+        } while (--wait_count);
 
         if (0U == wait_count)
         {
@@ -133,17 +133,17 @@ __WEAK hal_status_t hal_calendar_init(calendar_handle_t *p_calendar)
         p_calendar->pre_count = 0U;
         s_decimal = 0.0f;
 
-        /* Caculate seconds from 01.01.2000 00:00 to 1970.1.1 */
+        /* Calculate seconds from 01.01.2000 00:00 to 1970.1.1 */
         p_calendar->utc = 946684800;
 
         /* Store previous slow clock frequency */
         pre_clock_freq = p_calendar->clock_freq;
 
-        /* Clear warp interrupt flag */
-        __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_WARP | CALENDAR_FLAG_ALARM | CALENDAR_FLAG_TICK);
+        /* Clear wrap interrupt flag */
+        __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_WRAP | CALENDAR_FLAG_ALARM | CALENDAR_FLAG_TICK);
 
-        /* Enable warp interrupt */
-        __HAL_CALENDAR_ENABLE_IT(CALENDAR_IT_WARP);
+        /* Enable wrap interrupt */
+        __HAL_CALENDAR_ENABLE_IT(CALENDAR_IT_WRAP);
         __HAL_CALENDAR_DISABLE_IT(CALENDAR_IT_ALARM | CALENDAR_IT_TICK);
 
         /* Clear pending IRQ and eable NVIC interrupt */
@@ -164,7 +164,7 @@ __WEAK hal_status_t hal_calendar_init(calendar_handle_t *p_calendar)
         {
             break;
         }
-    } while(0);
+    } while (0);
     GLOBAL_EXCEPTION_ENABLE();
 
     return status;
@@ -176,7 +176,7 @@ __WEAK hal_status_t hal_calendar_deinit(calendar_handle_t *p_calendar)
     __HAL_CALENDAR_DISABLE();
     hal_status_t status = calendar_wait_flag_state_until_timeout();
 
-    /* Diseable NVIC interrupt and Clear pending IRQ */
+    /* Disable NVIC interrupt and Clear pending IRQ */
     NVIC_DisableIRQ(CALENDAR_IRQn);
     NVIC_ClearPendingIRQ(CALENDAR_IRQn);
 
@@ -185,8 +185,8 @@ __WEAK hal_status_t hal_calendar_deinit(calendar_handle_t *p_calendar)
     p_calendar->utc = 0;
     pre_clock_freq = 0.0f;
 
-    /* Disable warp and alarm interrupt */
-    __HAL_CALENDAR_DISABLE_IT(CALENDAR_IT_WARP | CALENDAR_IT_ALARM | CALENDAR_IT_TICK);
+    /* Disable wrap and alarm interrupt */
+    __HAL_CALENDAR_DISABLE_IT(CALENDAR_IT_WRAP | CALENDAR_IT_ALARM | CALENDAR_IT_TICK);
 
     return status;
 }
@@ -220,14 +220,14 @@ __WEAK hal_status_t hal_calendar_init_time(calendar_handle_t *p_calendar, calend
 
         /* Update system ms time */
         s_decimal =(float)((float)p_time->ms * CALENDAR_TICKS_PER_MS(p_calendar->clock_freq));
-    } while(0);
+    } while (0);
 
     /* Sync Alarm */
     do {
         calendar_time_t s_time = { 0 };
         uint32_t dif_sec = 0, alarm_sec = 0, alarm_value = 0;
 
-        if(HAL_OK != status)
+        if (HAL_OK != status)
         {
             break;
         }
@@ -252,7 +252,7 @@ __WEAK hal_status_t hal_calendar_init_time(calendar_handle_t *p_calendar, calend
                 alarm_sec += CALENDAR_SECONDS_PER_DAY;
             }
 
-            /* Caculate alarm value */
+            /* Calculate alarm value */
             //lint -e9029 -e9033
             alarm_value = timer_value + (uint32_t)(((alarm_sec - p_calendar->utc) * CALENDAR_CLOCK(p_calendar->clock_freq)) - s_decimal + 0.5f);
 
@@ -261,7 +261,7 @@ __WEAK hal_status_t hal_calendar_init_time(calendar_handle_t *p_calendar, calend
             status = calendar_wait_flag_state_until_timeout();
 
             uint32_t wait_count = 10000;
-            while(ll_calendar_get_read_alarm() != alarm_value)
+            while (ll_calendar_get_read_alarm() != alarm_value)
             {
                 if ((--wait_count) == 0U)
                 {
@@ -269,7 +269,7 @@ __WEAK hal_status_t hal_calendar_init_time(calendar_handle_t *p_calendar, calend
                 }
             }
         }
-    } while(0);
+    } while (0);
     GLOBAL_EXCEPTION_ENABLE();
 
     return status;
@@ -294,7 +294,7 @@ __WEAK hal_status_t hal_calendar_get_time(calendar_handle_t *p_calendar, calenda
 
         if (timer_value != p_calendar->pre_count)
         {
-            run_count = CALENDAR_ABS(0xFFFFFFFFU, timer_value, p_calendar->pre_count);
+            run_count = CALENDAR_ABS(timer_value, p_calendar->pre_count);
         }
         else
         {
@@ -328,7 +328,7 @@ __WEAK hal_status_t hal_calendar_get_time(calendar_handle_t *p_calendar, calenda
             p_time->sec += 1U;
             p_time->ms = 0;
         }
-    } while(0);
+    } while (0);
     GLOBAL_EXCEPTION_ENABLE();
 
     return status;
@@ -353,8 +353,8 @@ __WEAK hal_status_t hal_calendar_set_alarm(calendar_handle_t *p_calendar, calend
 
     do {
         curr_time.hour = p_alarm->hour;
-        curr_time.min  = p_alarm->min;
-        curr_time.sec  = 0;
+        curr_time.min = p_alarm->min;
+        curr_time.sec = 0;
         calendar_cover_time2seconds(&curr_time, &alarm_sec);
 
         /* If alarm time is befor the present time, or within 3s after. */
@@ -366,7 +366,7 @@ __WEAK hal_status_t hal_calendar_set_alarm(calendar_handle_t *p_calendar, calend
         p_calendar->mode |= CALENDAR_ALARM_DATE;
         memcpy(&p_calendar->alarm, p_alarm, sizeof(calendar_alarm_t));
 
-        /* Caculate alarm value */
+        /* Calculate alarm value */
         curr_value = ll_calendar_get_read_counter();
         alarm_value = curr_value + (uint32_t)(((alarm_sec - curr_sec) * CALENDAR_CLOCK(p_calendar->clock_freq)) - s_decimal + 0.5f);
 
@@ -375,9 +375,9 @@ __WEAK hal_status_t hal_calendar_set_alarm(calendar_handle_t *p_calendar, calend
         status = calendar_wait_flag_state_until_timeout();
 
         uint32_t wait_count = 10000;
-        while(ll_calendar_get_read_alarm() != alarm_value)
+        while (ll_calendar_get_read_alarm() != alarm_value)
         {
-            if((--wait_count) == 0U)
+            if ((--wait_count) == 0U)
             {
                 break;
             }
@@ -392,14 +392,14 @@ __WEAK hal_status_t hal_calendar_set_alarm(calendar_handle_t *p_calendar, calend
         __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_ALARM);
         /* Enable alarm interrupt */
         __HAL_CALENDAR_ENABLE_IT(CALENDAR_IT_ALARM);
-    } while(0);
+    } while (0);
 
     GLOBAL_EXCEPTION_ENABLE();
 
     return status;
 }
 
-__WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float SlowClockFreq)
+__WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float slow_clock_freq)
 {
     hal_status_t status = HAL_OK;
     uint32_t timer_value = 0;
@@ -412,13 +412,13 @@ __WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float 
     }
 
     /* No need to sync slow clock frequency if same */
-    if (fabs((double)SlowClockFreq - (double)pre_clock_freq) < 0.5)
+    if (fabs((double)slow_clock_freq - (double)pre_clock_freq) < 0.5)
     {
         return HAL_OK;
     }
     else
     {
-        pre_clock_freq = SlowClockFreq;
+        pre_clock_freq = slow_clock_freq;
     }
 
     GLOBAL_EXCEPTION_DISABLE();
@@ -427,11 +427,11 @@ __WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float 
         /* Read counter value */
         timer_value = ll_calendar_get_read_counter();
 
-        p_calendar->clock_freq = SlowClockFreq;
+        p_calendar->clock_freq = slow_clock_freq;
 
         if (timer_value != p_calendar->pre_count)
         {
-            run_count = CALENDAR_ABS(0xFFFFFFFFU, timer_value, p_calendar->pre_count);
+            run_count = CALENDAR_ABS(timer_value, p_calendar->pre_count);
         }
         else
         {
@@ -450,7 +450,7 @@ __WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float 
             p_calendar->utc += run_sec;
             s_decimal = fmodf(s_decimal, CALENDAR_CLOCK(p_calendar->clock_freq));
         }
-    } while(0);
+    } while (0);
 
     /* Sync Alarm */
     do {
@@ -476,27 +476,27 @@ __WEAK hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float 
                 alarm_sec += CALENDAR_SECONDS_PER_DAY;
             }
 
-            /* Caculate alarm value */
+            /* Calculate alarm value */
             alarm_value = timer_value + (uint32_t)(((alarm_sec - p_calendar->utc) * CALENDAR_CLOCK(p_calendar->clock_freq)) - s_decimal + 0.5f);
 
             /* Load alarm value into CALENDAR */
             ll_calendar_reload_alarm_and_request(alarm_value);
             status = calendar_wait_flag_state_until_timeout();
-            if(HAL_OK != status)
+            if (HAL_OK != status)
             {
                 break;
             }
 
             uint32_t wait_count = 10000;
-            while((ll_calendar_get_read_alarm() != alarm_value))
+            while ((ll_calendar_get_read_alarm() != alarm_value))
             {
-                if((--wait_count) == 0U)
+                if ((--wait_count) == 0U)
                 {
                     break;
                 }
             }
         }
-    } while(0);
+    } while (0);
     GLOBAL_EXCEPTION_ENABLE();
 
     return status;
@@ -517,7 +517,7 @@ __WEAK hal_status_t hal_calendar_set_tick(calendar_handle_t *p_calendar, uint32_
 
         GLOBAL_EXCEPTION_DISABLE();
 
-        /* Caculate alarm value */
+        /* Calculate alarm value */
         /* BALBOA2-166: Tick value reload need one clock */
         s_value_tick = (uint32_t)((p_calendar->interval * CALENDAR_TICKS_PER_MS(p_calendar->clock_freq)) - 0.5f);
 
@@ -537,7 +537,7 @@ __WEAK hal_status_t hal_calendar_set_tick(calendar_handle_t *p_calendar, uint32_
         __HAL_CALENDAR_ENABLE_IT(CALENDAR_IT_TICK);
 
         GLOBAL_EXCEPTION_ENABLE();
-    } while(0);
+    } while (0);
 
     return status;
 }
@@ -552,7 +552,7 @@ __WEAK hal_status_t hal_calendar_disable_event(calendar_handle_t *p_calendar, ui
     }
 
     GLOBAL_EXCEPTION_DISABLE();
-    switch(disable_mode)
+    switch (disable_mode)
     {
         case CALENDAR_ALARM_DISABLE_DATE:
             if ((p_calendar->mode & CALENDAR_ALARM_DATE) != 0U)
@@ -620,7 +620,7 @@ __WEAK void hal_calendar_irq_handler(calendar_handle_t *p_calendar)
 {
     if (ll_calendar_it_is_enabled_alarm())
     {
-        if(__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_ALARM))
+        if (__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_ALARM))
         {
         calendar_time_t curr_time;
         uint32_t alarm_value;
@@ -663,9 +663,9 @@ __WEAK void hal_calendar_irq_handler(calendar_handle_t *p_calendar)
 
     if (ll_calendar_it_is_enabled_wrap())
     {
-        if(__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_WARP))
+        if (__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_WRAP))
         {
-            __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_WARP);
+            __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_WRAP);
             ll_calendar_clear_it_event();
 
             /* overflow callback  */
@@ -675,7 +675,7 @@ __WEAK void hal_calendar_irq_handler(calendar_handle_t *p_calendar)
 
     if (ll_calendar_it_is_enabled_tick())
     {
-        if(__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_TICK))
+        if (__HAL_CALENDAR_GET_IT_SOURCE(CALENDAR_FLAG_TICK))
         {
             __HAL_CALENDAR_CLEAR_FLAG(CALENDAR_FLAG_TICK);
             ll_calendar_clear_it_event();
@@ -720,7 +720,7 @@ __WEAK void hal_calendar_overflow_callback(calendar_handle_t *p_calendar)
 
 /** @} */
 
-/* Caculate seconds from 01.01.2000 00:00 to the time */
+/* Calculate seconds from 01.01.2000 00:00 to the time */
 static void calendar_cover_time2seconds(calendar_time_t *p_time, uint32_t *p_seconds)
 {
     uint32_t year;
@@ -760,14 +760,19 @@ static void calendar_cover_seconds2time(calendar_time_t *p_time, uint32_t second
         secs = 0;
     }
 
-    time.sec    =(uint8_t)(secs % 60);    secs /= 60;
-    time.min    =(uint8_t)(secs % 60);    secs /= 60;
-    time.hour   = (uint8_t)secs;
+    time.sec = (uint8_t)(secs % 60);
+    secs /= 60;
+    time.min = (uint8_t)(secs % 60);
+    secs /= 60;
+    time.hour = (uint8_t)secs;
 
-    year        = 2000;
-    time.week   = (uint8_t)((days + 6) % 7);
+    year = 2000;
+    time.week = (uint8_t)((days + 6) % 7);
 
-    year        += (days / 1461) * 4; days %= 1461;
+    // 1461 represents the number of days in a four-year cycle,
+    // which is used to calculate the total number of days since the year 2000 and to deduce the year based on those days.
+    // Whenever the expression days / 1461 reaches a certain value in the code, it indicates that a complete four-year cycle has passed.
+    year += (days / 1461) * 4; days %= 1461;
     if (days >= 366)
     {
         dayp = days1;
@@ -778,18 +783,18 @@ static void calendar_cover_seconds2time(calendar_time_t *p_time, uint32_t second
     }
     if (days >= 366)
     {
-        year    += (days - 1) / 365;
-        days    = (days - 1) % 365;
+        year += (days - 1) / 365;
+        days = (days - 1) % 365;
     }
 
-    time.mon    = (uint8_t)((days / 31) + 1);
+    time.mon = (uint8_t)((days / 31) + 1);
     if (days >= dayp[time.mon])
     {
         time.mon += 1U;
     }
 
-    time.date   = (uint8_t)(days - dayp[time.mon - 1] + 1U);
-    time.year   = (uint8_t)(year - 2000U);
+    time.date = (uint8_t)(days - dayp[time.mon - 1] + 1U);
+    time.year = (uint8_t)(year - 2000U);
 
     memcpy(p_time, &time, sizeof(calendar_time_t));
 }
@@ -798,9 +803,9 @@ static hal_status_t calendar_wait_flag_state_until_timeout(void)
 {
     uint32_t timeout = 500000;
 
-    while(__HAL_CALENDAR_BUSY_FLAG())
+    while (__HAL_CALENDAR_BUSY_FLAG())
     {
-        if((--timeout) == 0U)
+        if ((--timeout) == 0U)
         {
             break;
         }

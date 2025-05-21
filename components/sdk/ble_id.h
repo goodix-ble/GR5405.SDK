@@ -413,6 +413,17 @@ enum hci_opcode
     HCI_VS_SET_PREF_SLAVE_LATENCY_CMD_OPCODE            = 0xFC13,
     HCI_VS_SET_PREF_SLAVE_EVT_DUR_CMD_OPCODE            = 0xFC14,
     HCI_VS_SET_MAX_RX_SIZE_AND_TIME_CMD_OPCODE          = 0xFC15,
+
+    HCI_DBG_BLE_REG_RD_CMD_OPCODE                       = 0xFC30,
+    HCI_DBG_BLE_REG_WR_CMD_OPCODE                       = 0xFC31,
+    HCI_DBG_SEND_LLCP_CMD_OPCODE                        = 0xFC35,
+    HCI_DBG_LLCP_DISCARD_CMD_OPCODE                     = 0xFC36,
+    HCI_DBG_RF_REG_RD_CMD_OPCODE                        = 0xFC39,
+    HCI_DBG_RF_REG_WR_CMD_OPCODE                        = 0xFC3A,
+    HCI_DBG_RF_SWITCH_CLK_CMD_OPCODE                    = 0xFC3C,
+    HCI_DBG_RF_WR_DATA_TX_CMD_OPCODE                    = 0xFC3D,
+    HCI_DBG_RF_RD_DATA_RX_CMD_OPCODE                    = 0xFC3E,
+    HCI_DBG_RF_CNTL_TX_CMD_OPCODE                       = 0xFC3F,
 };
 
 enum hci_evt_code
@@ -634,6 +645,7 @@ enum gapc_msg_id
     GAPC_SECURITY_IND                                   = MSG_ID(GAPC, 0x1B),
     GAPC_SIGN_COUNTER_IND                               = MSG_ID(GAPC, 0x1C),
     GAPC_CON_CHANNEL_MAP_IND                            = MSG_ID(GAPC, 0x1D),
+    GAPC_SEC_REQ_TIMEOUT_IND                            = MSG_ID(GAPC, 0x1E),
     GAPC_SET_LE_PING_TO_CMD                             = MSG_ID(GAPC, 0x28),
     GAPC_LE_PING_TO_VAL_IND                             = MSG_ID(GAPC, 0x29),
     GAPC_LE_PING_TO_IND                                 = MSG_ID(GAPC, 0x2A),

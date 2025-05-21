@@ -65,12 +65,12 @@ extern "C" {
   * @{
   */
 
-/** @defgroup  CALENDAR_Time CALENDAR Time
+/** @defgroup CALENDAR_TIME CALENDAR time
   * @{
   */
 
 /**
-  * @brief  CALENDAR_Time calendar time structure definition
+  * @brief CALENDAR time structure definition
   */
 typedef struct _calendar_time
 {
@@ -100,7 +100,7 @@ typedef struct _calendar_time
 } calendar_time_t;
 
 /**
-  * @brief  CALENDAR_Alarm calendar alarm structure definition
+  * @brief CALENDAR alarm structure definition
   */
 typedef struct _calendar_alarm
 {
@@ -121,12 +121,12 @@ typedef struct _calendar_alarm
 
 /** @} */
 
-/** @defgroup CALENDAR_handle CALENDAR handle
+/** @defgroup CALENDAR_HANDLE CALENDAR handle
   * @{
   */
 
 /**
-  * @brief  CALENDAR handle Structure definition
+  * @brief  CALENDAR handle structure definition
   */
 typedef struct _calendar_handle
 {
@@ -147,22 +147,22 @@ typedef struct _calendar_handle
 
 /** @} */
 
-/** @addtogroup HAL_CALENDAR_CALLBACK_STRUCTURES Callback Structures
+/** @addtogroup HAL_CALENDAR_CALLBACK_STRUCTURES Callback structures
   * @{
   */
 
-/** @defgroup HAL_CALENDAR_Callback Callback
+/** @defgroup HAL_CALENDAR_CALLBACK Callback
   * @{
   */
 
 /**
-  * @brief HAL_CALENDAR Callback function definition
+  * @brief CALENDAR callback function definition
   */
 typedef struct _hal_calendar_callback
 {
     void (*calendar_alarm_callback)(calendar_handle_t *p_calendar);     /**< CALENDAR date count complete callback */
     void (*calendar_tick_callback)(calendar_handle_t *p_calendar);      /**< CALENDAR tick count complete callback */
-    void (*calendar_overflow_callback)(calendar_handle_t *p_calendar);      /**< CALENDAR overflow callback */
+    void (*calendar_overflow_callback)(calendar_handle_t *p_calendar);  /**< CALENDAR overflow callback */
 } hal_calendar_callback_t;
 
 /** @} */
@@ -175,34 +175,34 @@ typedef struct _hal_calendar_callback
   */
 
 /* Exported constants --------------------------------------------------------*/
-/** @defgroup CALENDAR_Exported_Constants CALENDAR Exported Constants
+/** @defgroup CALENDAR_EXPORTED_CONSTANTS CALENDAR exported constants
   * @{
   */
 
-/** @defgroup CALENDAR_Interrupts CALENDAR Interrupts
+/** @defgroup CALENDAR_INTERRUPTS CALENDAR interrupts
   * @{
   */
 #define CALENDAR_IT_ALARM                   RTC_INT_EN_ALARM                        /**< Alarm interrupt    */
-#define CALENDAR_IT_WARP                    RTC_INT_EN_WRAP                         /**< Warp interrupt     */
-#define CALENDAR_IT_TICK                    RTC_INT_EN_TICK                         /**< Tick   interrupt   */
+#define CALENDAR_IT_WRAP                    RTC_INT_EN_WRAP                         /**< Wrap interrupt     */
+#define CALENDAR_IT_TICK                    RTC_INT_EN_TICK                         /**< Tick interrupt   */
 /** @} */
 
-/** @defgroup CALENDAR_Flags CALENDAR Flags
+/** @defgroup CALENDAR_Flags CALENDAR flags
   * @{
   */
 #define CALENDAR_FLAG_ALARM                 RTC_INT_STAT_ALARM                      /**< Alarm interrupt flag   */
-#define CALENDAR_FLAG_WARP                  RTC_INT_STAT_WRAP                       /**< Warp interrupt flag    */
-#define CALENDAR_FLAG_TICK                  RTC_INT_STAT_TICK                       /**< Tick   interrupt flag  */
+#define CALENDAR_FLAG_WRAP                  RTC_INT_STAT_WRAP                       /**< Wrap interrupt flag    */
+#define CALENDAR_FLAG_TICK                  RTC_INT_STAT_TICK                       /**< Tick interrupt flag  */
 /** @} */
 
-/** @defgroup CALENDAR_ALARM_SEL CALENDAR Alarm type select
+/** @defgroup CALENDAR_ALARM_SEL CALENDAR alarm type select
   * @{
   */
 #define CALENDAR_ALARM_SEL_DATE             (0UL)                                   /**< Alarm in date    */
 #define CALENDAR_ALARM_SEL_WEEKDAY          (1UL)                                   /**< Alarm in weekday */
 /** @} */
 
-/** @defgroup CALENDAR_ALARM_WEEKDAY CALENDAR Alarm weekday
+/** @defgroup CALENDAR_ALARM_WEEKDAY CALENDAR alarm weekday
   * @{
   */
 #define CALENDAR_ALARM_WEEKDAY_SUN          (0x01ul)                                /**< Alarm weekday mask Sunday    */
@@ -214,15 +214,15 @@ typedef struct _hal_calendar_callback
 #define CALENDAR_ALARM_WEEKDAY_SAT          (0x40ul)                                /**< Alarm weekday mask Saturday  */
 /** @} */
 
-/** @defgroup CALENDAR_ALARM_DISABLE CALENDAR Alarm mdoe
+/** @defgroup CALENDAR_ALARM_DISABLE_MODE CALENDAR alarm disable mode
   * @{
   */
-#define CALENDAR_ALARM_DISABLE_DATE         (1UL)                                   /**< Disable date alarm */
-#define CALENDAR_ALARM_DISABLE_TICK         (2UL)                                   /**< Disable tick 0 alarm */
+#define CALENDAR_ALARM_DISABLE_DATE         (1UL)                                                       /**< Disable date alarm */
+#define CALENDAR_ALARM_DISABLE_TICK         (2UL)                                                       /**< Disable tick 0 alarm */
 #define CALENDAR_ALARM_DISABLE_ALL          (CALENDAR_ALARM_DISABLE_DATE | CALENDAR_ALARM_DISABLE_TICK) /**< Disable all alarm */
 /** @} */
 
-/** @defgroup CALENDAR_ALARM_DISABLE CALENDAR Alarm mdoe
+/** @defgroup CALENDAR_ALARM_TICK_MODE CALENDAR alarm tick mode
   * @{
   */
 #define CALENDAR_TICK_SINGLE               LL_CLDR_TIMER_TICK_TYPE_SINGLE           /**< Alarm tick reload single   */
@@ -233,7 +233,7 @@ typedef struct _hal_calendar_callback
 /** @} */
 
 /* Exported macro ------------------------------------------------------------*/
-/** @defgroup CALENDAR_Exported_Macros CALENDAR Exported Macros
+/** @defgroup CALENDAR_EXPORTED_MACROS CALENDAR exported macros
   * @{
   */
 
@@ -247,38 +247,38 @@ typedef struct _hal_calendar_callback
 #define __HAL_CALENDAR_DISABLE()                            MODIFY_REG(CALENDAR->CFG0, 0xFFFFFFFFU, RTC_CFG0_CFG);
 
 /** @brief  Enable the specified CALENDAR interrupts.
-  * @param  __INTERRUPT__ Specifies the interrupt source to enable.
+  * @param[in]  __INTERRUPT__ Specifies the interrupt source to enable.
   *         This parameter can be one of the following values:
   *            @arg @ref CALENDAR_IT_ALARM Alarm Interrupt
-  *            @arg @ref CALENDAR_IT_WARP  Warp Interrupt
+  *            @arg @ref CALENDAR_IT_WRAP  Wrap Interrupt
   *            @arg @ref CALENDAR_IT_TICK Tick Interrupt
   * @retval None
   */
 #define __HAL_CALENDAR_ENABLE_IT(__INTERRUPT__)             SET_BITS(CALENDAR->INT_EN, (__INTERRUPT__))
 /** @brief  Disable the specified CALENDAR interrupts.
-  * @param  __INTERRUPT__ Specifies the interrupt source to disable.
+  * @param[in]  __INTERRUPT__ Specifies the interrupt source to disable.
   *         This parameter can be one of the following values:
   *            @arg @ref CALENDAR_IT_ALARM Alarm Interrupt
-  *            @arg @ref CALENDAR_IT_WARP  Warp Interrupt
+  *            @arg @ref CALENDAR_IT_WRAP  Wrap Interrupt
   *            @arg @ref CALENDAR_IT_TICK Tick Interrupt
   * @retval None
   */
 #define __HAL_CALENDAR_DISABLE_IT(__INTERRUPT__)            CLEAR_BITS(CALENDAR->INT_EN, (__INTERRUPT__))
 
 /** @brief  Check whether the specified CALENDAR interrupt flag is set or not.
-  * @param  __FLAG__ Specifies the interrupt source to check.
+  * @param[in]  __FLAG__ Specifies the interrupt source to check.
   *          This parameter can be one of the following values:
   *            @arg @ref CALENDAR_FLAG_ALARM Alarm Interrupt event
-  *            @arg @ref CALENDAR_FLAG_WARP  Warp Interrupt event
+  *            @arg @ref CALENDAR_FLAG_WRAP  Wrap Interrupt event
   *            @arg @ref CALENDAR_FLAG_TICK Tick Interrupt event
   * @retval The new state of __IT__ (TRUE or FALSE).
   */
 #define __HAL_CALENDAR_GET_IT_SOURCE(__FLAG__)              (READ_BITS(CALENDAR->INT_STAT, (__FLAG__)) == (__FLAG__))
 /** @brief  Clear the specified CALENDAR flag.
-  * @param  __FLAG__ Specifies the flag to clear.
+  * @param[in]  __FLAG__ Specifies the flag to clear.
   *         This parameter can be one of the following values:
   *            @arg @ref CALENDAR_FLAG_ALARM Alarm Interrupt event
-  *            @arg @ref CALENDAR_FLAG_WARP  Warp Interrupt event
+  *            @arg @ref CALENDAR_FLAG_WRAP  Wrap Interrupt event
   *            @arg @ref CALENDAR_FLAG_TICK Tick Interrupt event
   * @retval None
   */
@@ -296,26 +296,26 @@ typedef struct _hal_calendar_callback
   */
 
 /** @brief  Check if CALENDAR Alarm Type is valid.
-  * @param  __TYPE__    CALENDAR Alarm Type.
+  * @param[in]  __TYPE__    CALENDAR Alarm Type.
   * @retval SET (__TYPE__ is valid) or RESET (__TYPE__ is invalid)
   */
 #define IS_CALENDAR_ALARM_TYPE(__TYPE__)        (((__TYPE__) == CALENDAR_ALARM_SEL_DATE) || \
                                                  ((__TYPE__) == CALENDAR_ALARM_SEL_WEEKDAY))
 
 /** @brief  Check if CALENDAR Date is valid.
-  * @param  __DATE__    CALENDAR Date.
+  * @param[in]  __DATE__    CALENDAR Date.
   * @retval SET (__DATE__ is valid) or RESET (__DATE__ is invalid)
   */
 #define IS_CALENDAR_DATE(__DATE__)              (((__DATE__) >  0U) && ((__DATE__) <= 31U))
 
 /** @brief  Check if CALENDAR Weekday is valid.
-  * @param  __WEEKDAY__    CALENDAR Weekday.
+  * @param[in]  __WEEKDAY__    CALENDAR Weekday.
   * @retval SET (__WEEKDAY__ is valid) or RESET (__WEEKDAY__ is invalid)
   */
 #define IS_CALENDAR_WEEKDAY(__WEEKDAY__)        (((__WEEKDAY__) >= 0U) && ((__WEEKDAY__) <= 6U))
 
 /** @brief  Check if CALENDAR year is leap year.
-  * @param  __YEAR__    CALENDAR Year.
+  * @param[in]  __YEAR__    CALENDAR Year.
   * @retval SET (__YEAR__ is leap year) or RESET (__YEAR__ is nonleap year)
   */
 #define IS_CALENDAR_LEAP_YEAR(__YEAR__)         ((((__YEAR__) % 4U) == 0 && ((__YEAR__) % 100U) != 0U) || \
@@ -350,7 +350,7 @@ typedef struct _hal_calendar_callback
 /**
  ****************************************************************************************
  * @brief  Initialize the CALENDAR according to the specified parameters in the
- *         calendar_init_t of  associated handle.
+ *         calendar_init_t of associated handle.
  *
  * @param[in]  p_calendar: Pointer to a CALENDAR handle which contains the configuration
  *               information for the specified CALENDAR module.
@@ -436,7 +436,7 @@ hal_status_t hal_calendar_get_time(calendar_handle_t *p_calendar, calendar_time_
  *
  * @param[in]  p_calendar: Pointer to a CALENDAR handle which contains the configuration
  *               information for the specified CALENDAR module.
- * @param[in]  p_alarm: After seconds will generate an date alarm interrupt.
+ * @param[in]  p_alarm: After seconds will generate a date alarm interrupt.
  *
  * @retval ::HAL_OK: Operation is OK.
  * @retval ::HAL_ERROR: Parameter error or operation not supported.
@@ -452,7 +452,7 @@ hal_status_t hal_calendar_set_alarm(calendar_handle_t *p_calendar, calendar_alar
  *
  * @param[in]  p_calendar: Pointer to a CALENDAR handle which contains the configuration
  *               information for the specified CALENDAR module.
- * @param[in]  interval: After milliseconds will generate an milliseconds alarm interrupt.
+ * @param[in]  interval: After milliseconds will generate a milliseconds alarm interrupt.
  *              The value of interval is greater than or equal to 0ms.
  *
  * @retval ::HAL_OK: Operation is OK.
@@ -489,7 +489,7 @@ hal_status_t hal_calendar_disable_event(calendar_handle_t *p_calendar, uint32_t 
  *
  * @param[in]  p_calendar: Pointer to a CALENDAR handle which contains the configuration
  *               information for the specified CALENDAR module.
- * @param[in]  SlowClockFreq: Number of slow clocks after calibration.
+ * @param[in]  slow_clock_freq: Number of slow clocks after calibration.
  *
  * @retval ::HAL_OK: Operation is OK.
  * @retval ::HAL_ERROR: Parameter error or operation not supported.
@@ -497,7 +497,7 @@ hal_status_t hal_calendar_disable_event(calendar_handle_t *p_calendar, uint32_t 
  * @retval ::HAL_TIMEOUT: Timeout occurred.
  ****************************************************************************************
  */
-hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float SlowClockFreq);
+hal_status_t hal_calendar_sync_time(calendar_handle_t *p_calendar, float slow_clock_freq);
 
 /** @} */
 

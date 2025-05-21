@@ -77,6 +77,15 @@ typedef enum
 } ble_rf_tx_mode_t;
 
 /**
+ * @brief RF TX type.
+ */
+typedef enum
+{
+    BLE_RF_TEST_TYPE_MODEM           = 0,
+    BLE_RF_TEST_TYPE_SINGLE_CARRIER  = 1,
+} ble_rf_test_type_t;
+
+/**
  * @brief The resistance value (ohm) of the RF match circuit.
  */
 typedef enum
@@ -147,6 +156,13 @@ struct ble_ext_llcp_cb_func_t
     void (*llc_ext_llcp_req_proc_done_cb) (uint8_t link_id, uint8_t status, uint8_t ext_opcode, uint8_t *per_param); /**< Report the Extended llcp procedure done. */
     uint8_t (*llc_ext_llcp_req_handler_cb) (uint8_t link_id, uint8_t *req_param, uint8_t *rsp_param);                /**< Handle the Extended llcp request. */
 };
+
+typedef struct dbg_ble_llcp_info_entry_s
+{
+    uint8_t record_index;
+    uint8_t direct;    /**< 1-tx, 0-rx. */
+    uint8_t pdu[22]; /**<the same as spec. */
+} dbg_ble_llcp_info_entry_t;
 
 /** @} */
 
@@ -397,6 +413,9 @@ void ble_aes_cbc_decrypt(const uint8_t *key, const uint8_t *iv, const uint8_t *v
 /**
  *****************************************************************************************
  * @brief Start dtm tx test.
+ *
+ * @note TX modem test need to enable macro DTM_TEST_V4_CMD_ENABLE
+ *       TX single carrier test need to enable macro DTM_TEST_PRIVATE_CMD_ENABLE
  * @param[in] tx_channel TX channel, range: 0x00 to 0x27.
  * @param[in] data_len   Packet payload length.
  * @param[in] pkt_type   Packet payload type, range: 0x00 to 0x07.
@@ -409,15 +428,22 @@ void ble_aes_cbc_decrypt(const uint8_t *key, const uint8_t *iv, const uint8_t *v
  *                       0x06: Repeated "00001111"
  *                       0x07: Repeated "01010101"
  * @param[in] tx_phy     TX phy, @ref ble_gap_phy_type_t.
+ * @param[in] test_type  Test type, @ref ble_rf_test_type_t.
+ * @param[in] tx_power   Tx power, unit(dBm).
+ *                       BLE_RF_TX_MODE_SPA_MODE support value:[-20, -16, -10, -8, -5, 0, 1, 2, 3, 4, 5]
+ *                       BLE_RF_TX_MODE_HPA_MODE support value:[-10, -5, 0, 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
  *
  * @return void.
  *****************************************************************************************
  */
-void ble_dtm_tx_test_start(uint8_t tx_channel, uint8_t data_len, uint8_t pkt_type, uint8_t tx_phy);
+void ble_dtm_tx_test_start(uint8_t tx_channel, uint8_t data_len, uint8_t pkt_type, uint8_t tx_phy, uint8_t test_type, int8_t tx_power);
 
 /**
  *****************************************************************************************
  * @brief Start dtm rx test.
+ *
+ * @note RX test need to enable macro DTM_TEST_V2_CMD_ENABLE
+ *
  * @param[in] rx_channel RX channel, range: 0x00 to 0x27.
  * @param[in] rx_phy     RX phy, @ref ble_gap_phy_type_t.
  *
@@ -428,12 +454,33 @@ void ble_dtm_rx_test_start(uint8_t rx_channel, uint8_t rx_phy);
 
 /**
  *****************************************************************************************
- * @brief End dtm test.
+ * @brief End dtm tx test.
+ * @param[in] test_type Test type, @ref ble_rf_test_type_t.
  *
  * @return void.
  *****************************************************************************************
  */
-void ble_dtm_test_end(void);
+void ble_dtm_tx_test_end(uint8_t test_type);
+
+/**
+ *****************************************************************************************
+ * @brief End dtm rx test.
+ *
+ * @return void.
+ *****************************************************************************************
+ */
+void ble_dtm_rx_test_end(void);
+
+/**
+ *****************************************************************************************
+ * @brief register llcp debug info buffer
+ * @param[in] conidx: connection index
+ * @param[in] p_entry_buf: the buffer used to store the llcp infomation
+ * @param[in] entry_num: entry number in the buffer
+ * @return The result of this function.
+ *****************************************************************************************
+ */
+uint8_t dbg_ble_stack_llcp_info_buf_register(uint8_t conidx, dbg_ble_llcp_info_entry_t *p_entry_buf, uint8_t entry_num);
 
 /** @} */
 #endif

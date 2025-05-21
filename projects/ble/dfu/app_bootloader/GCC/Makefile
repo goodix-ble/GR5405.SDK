@@ -36,8 +36,6 @@ PRJ_C_SRC_FILES:=   \
 ../../../../../drivers/src/app_gpiote.c  \
 ../../../../../drivers/src/app_pwr_mgmt.c  \
 ../../../../../drivers/src/app_uart.c  \
-../../../../../drivers/src/app_spi.c  \
-../../../../../drivers/src/app_spi_dma.c  \
 ../../../../../components/libraries/app_assert/app_assert.c  \
 ../../../../../components/libraries/app_key/app_key.c  \
 ../../../../../components/libraries/app_key/app_key_core.c  \
@@ -52,31 +50,23 @@ PRJ_C_SRC_FILES:=   \
 ../../../../../components/libraries/nvds/gr_nvds_adapter.c  \
 ../../../../../components/libraries/nvds/gr_nvds.c  \
 ../../../../../hal_drv/source/hal.c  \
-../../../../../hal_drv/source/hal_adc.c  \
 ../../../../../hal_drv/source/hal_aon_wdt.c  \
-../../../../../hal_drv/source/hal_bod.c  \
 ../../../../../hal_drv/source/hal_clock.c  \
 ../../../../../hal_drv/source/hal_dma.c  \
-../../../../../hal_drv/source/hal_dual_tim.c  \
 ../../../../../hal_drv/source/hal_efuse.c  \
 ../../../../../hal_drv/source/hal_gpio.c  \
-../../../../../hal_drv/source/hal_i2c.c  \
-../../../../../hal_drv/source/hal_pwm.c  \
 ../../../../../hal_drv/source/hal_pwr_mgmt.c  \
 ../../../../../hal_drv/source/hal_rng.c  \
 ../../../../../hal_drv/source/hal_rtc.c  \
 ../../../../../hal_drv/source/hal_sleep_timer.c  \
-../../../../../hal_drv/source/hal_spi.c  \
-../../../../../hal_drv/source/hal_tim.c  \
 ../../../../../hal_drv/source/hal_uart.c  \
 ../../../../../components/profiles/common/ble_prf_utils.c  \
 ../../../../../components/profiles/otas/otas.c  \
-../../../../../components/drivers_ext/gr55xx/gr55xx_spi_flash.c  \
 ../Src/platform/user_periph_setup.c  \
-../Src/sign_verify/src/sign_verify.c  \
+../../../../../components/libraries/app_bootloader/sign_verify/src/sign_verify.c  \
 ../Src/user/main.c  \
-../Src/user/bootloader_ota.c  \
-../Src/user/bootloader_boot_vendor.c  \
+../../../../../components/libraries/app_bootloader/bootloader_ota.c  \
+../../../../../components/libraries/app_bootloader/bootloader_boot_vendor.c  \
 ../Src/user/bootloader_boot_port.c  \
 
 
@@ -160,7 +150,7 @@ PRJ_C_INCLUDE_PATH :=   \
 ../../../../../platform/include  \
 ../../../../../platform/soc/include  \
 ../../../../../platform/soc/linker/keil  \
-../Src/sign_verify/inc  \
+../../../../../components/libraries/app_bootloader/sign_verify/inc  \
 ../../../../../components/libraries/app_crypto  \
 ../../../../../components/libraries/delay  \
 ../../../../../platform/arch/arm/cortex-m/armV7M  \
@@ -168,10 +158,13 @@ PRJ_C_INCLUDE_PATH :=   \
 ../../../../../hal_drv/include  \
 ../../../../../platform/arch/arm/cortex-m/nvic  \
 ../../../../../components/libraries/nvds  \
+../../../../../components/libraries/app_bootloader  \
 
 
 PRJ_C_MICRO_DEFINES :=   \
 BOOTLOADER_ENABLE  \
+WDT_RUN_ENABLE=1  \
+BOOT_LONG_TIME=0  \
 
 
 PRJ_ASM_INCLUDE_PATH :=   \
@@ -181,7 +174,7 @@ PRJ_ASM_MICRO_DEFINES :=   \
 
 
 IS_WIN_OS :=  true
-
+LINKER_SCRIPT_TMPL = ../../../../../platform/soc/linker/gcc/gcc_linker.lds
 
 # Set echo cmd
 ECHO = @echo
@@ -213,6 +206,10 @@ CFLAGS += $(foreach md,$(PRJ_C_MICRO_DEFINES),-D$(md))
 CFLAGS += $(COMMON_COMPILE_FLAGS)
 CFLAGS += -O2
 
+## Set CPPFLAGS
+CPPFLAGS += $(foreach inc,$(PRJ_C_INCLUDE_PATH),-I $(inc))
+CPPFLAGS += $(foreach md,$(PRJ_C_MICRO_DEFINES),-D$(md))
+
 ## Set ASMFLAGS
 ASMFLAGS += $(foreach inc,$(PRJ_ASM_INCLUDE_PATH),-I $(inc))
 # Set macro-defines Flags
@@ -220,8 +217,6 @@ ASMFLAGS += $(foreach md,$(PRJ_ASM_MICRO_DEFINES),-D$(md))
 ASMFLAGS += $(COMMON_COMPILE_FLAGS)
 
 ## Set default compile ref files
-LINK_SCRIPT 		= ./gcc_linker.lds
-
 PATCH_FILE  		= ../../../../../platform/soc/linker/gcc/rom_symbol_gcc.txt
 
 GCC_STARTUP_ASM_FILE 	= ../../../../../platform/arch/arm/cortex-m/gcc/startup_gr55xx.s
@@ -237,7 +232,7 @@ endif
 LDFLAGS += -Wl,--gc-sections
 # LDFLAGS += -specs=nano.specs
 LDFLAGS += -L../../../../../components/libraries/app_crypto/gcc/ -lapp_crypto
-LDFLAGS += -L../../../../../platform/soc/linker/gcc/ -lble_sdk
+LDFLAGS += -Wl,--start-group -L../../../../../components/mesh/lib/gcc/ -lmesh -L../../../../../platform/soc/linker/gcc/ -lble_sdk -Wl,--end-group
 
 
 ## Set compile output directory
@@ -255,6 +250,7 @@ OBJ_ASM := $(SRC_ASM:.s=.o)
 OBJ 	:= $(OBJ_C) $(OBJ_ASM)
 OBJ_ADJUST 	= $(patsubst %.o,$(BUILD_OBJ)/%.o,$(notdir $(OBJ)))
 
+LINKER_SCRIPT := $(BUILD)/gcc_linker.lds
 
 ## verbosity switch
 V ?= 0
@@ -277,6 +273,10 @@ vpath %.s ./$(MAKE_PATH)
 ## default make goal
 all: mk_path $(BUILD)/$(MAKE_TARGET_NAME).bin $(BUILD)/$(MAKE_TARGET_NAME).hex
 
+## preprocess link-script
+$(LINKER_SCRIPT): $(LINKER_SCRIPT_TMPL)
+	$(V_CPP) $(CPP) $(CPPFLAGS) -E $< -o $@ -P
+
 ##  compile C & asm files
 $(BUILD_OBJ)/%.o : %.c
 	$(V_CC) $(CC) $(CFLAGS) -c $< -o $@
@@ -294,9 +294,9 @@ $(BUILD)/$(MAKE_TARGET_NAME).bin: $(BUILD_LST)/$(MAKE_TARGET_NAME).elf
 	$(ECHO) "compile binary file ..."
 	$(V_OBJCOPY) $(OBJCOPY) -O binary $< $@
 
-$(BUILD_LST)/$(MAKE_TARGET_NAME).elf: $(OBJ_ADJUST)
+$(BUILD_LST)/$(MAKE_TARGET_NAME).elf: $(OBJ_ADJUST) $(LINKER_SCRIPT)
 	$(ECHO) "compile .elf file ..."
-	$(V_LINK) $(LINK) $(CFLAGS) -T $(LINK_SCRIPT) $(PATCH_FILE) $(OBJ_ADJUST) $(LDFLAGS) -Wl,-Map=$(BUILD_LST)/$(MAKE_TARGET_NAME).map -o $@
+	$(V_LINK) $(LINK) $(CFLAGS) -T $(LINKER_SCRIPT) $(PATCH_FILE) $(OBJ_ADJUST) $(LDFLAGS) -Wl,-Map=$(BUILD_LST)/$(MAKE_TARGET_NAME).map -o $@
 
 
 mk_path :

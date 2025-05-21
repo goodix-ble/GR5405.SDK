@@ -1,7 +1,18 @@
+#include "flash_linker_config.h"
+
+#define APP_FLASH_END_ADDR (FLASH_START_ADDR + FLASH_SIZE)
+
+#if BLE_SUPPORT
+#define USABLE_RAM_SIZE (APP_RAM_SIZE - ROM_RTN_RAM_SIZE - BLE_EM_USED_SIZE)
+#else
+#define USABLE_RAM_SIZE (APP_RAM_SIZE - ROM_RTN_RAM_SIZE)
+#endif // BLE_SUPPORT
+
 MEMORY
 {
-    FLASH (rx) : ORIGIN = 0x00202000, LENGTH = (0x00800000 -0x00002000)
-    RAM (rwx)  : ORIGIN = 0x20000000 +0x1E00, LENGTH = (0x00018000 -0x2000 -0x4000)
+    FLASH (rx) : ORIGIN = (APP_CODE_RUN_ADDR), LENGTH = (APP_FLASH_END_ADDR - APP_CODE_RUN_ADDR)
+    RAM_ALIAS (rx) : ORIGIN = (RAM_CODE_SPACE_START), LENGTH = (RAM_CODE_SPACE_SIZE)
+    RAM (rwx) : ORIGIN = (RAM_CODE_SPACE_START + HIGH_RAM_OFFSET), LENGTH = (USABLE_RAM_SIZE)
 }
 
 GROUP(libgcc.a libc.a libm.a libnosys.a)
@@ -48,13 +59,23 @@ SECTIONS
     __exidx_end = .;
     __etext = .;
 
-    .data : AT (__etext)
+    .ram_code : AT(__etext)
     {
-        __data_start__ = .;
-        *(vtable)
-        *(.data*)
+        __data_start__ = . + HIGH_RAM_OFFSET;
         *(.ramfunc)
         *(RAM_CODE)
+        . = ALIGN(0x100);
+    } > RAM_ALIAS
+
+    .ram_code_dummy (NOLOAD):
+    {
+        . += SIZEOF(.ram_code);
+    } > RAM
+
+    .data : AT (__etext + SIZEOF(.ram_code))
+    {
+        *(vtable)
+        *(.data*)
         . = ALIGN(128);
         *(FPB*)
         . = ALIGN(4);
@@ -86,23 +107,12 @@ SECTIONS
         __bss_end__ = .;
     } > RAM
 
-    .heap (COPY):
-    {
-        __HeapBase = .;
-        __end__ = .;
-        end = __end__;
-        KEEP(*(.heap*))
-        __HeapLimit = .;
-    } > RAM
-
-    .stack_dummy (COPY):
-    {
-        KEEP(*(.stack*))
-    } > RAM
-
-    __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
+    __HeapSize = MAX(SYSTEM_HEAP_SIZE, 0x1000); // At least reserve 4096 byte for stdlib
+    __HeapBase = STACK_END_ADDR - __HeapSize - SYSTEM_STACK_SIZE;
+    end = __HeapBase;
+    __StackTop = STACK_END_ADDR;
+    __StackLimit = __StackTop - SYSTEM_STACK_SIZE;
     PROVIDE(__stack = __StackTop);
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+    ASSERT(__HeapBase >= __bss_end__, "region RAM overflowed with HEAP & STACK")
 
 }

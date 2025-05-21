@@ -47,6 +47,7 @@
 #include "patch.h"
 #include "hci_uart.h"
 #include "ble.h"
+#include "app_assert.h"
 
 /*
  * GLOBAL VARIABLE DEFINITIONS

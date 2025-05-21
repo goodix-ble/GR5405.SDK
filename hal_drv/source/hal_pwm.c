@@ -281,13 +281,10 @@ static void pwm_dma_error(dma_handle_t *p_dma)
     UNUSED(p_dma);
 }
 
-extern ll_pwm_init_t pwm_init;
-ll_pwm_init_t pwm_init = LL_PWM_DEFAULT_CONFIG;
-
 __WEAK hal_status_t hal_pwm_init(pwm_handle_t *p_pwm)
 {
     hal_status_t  status   = HAL_OK;
-
+    ll_pwm_init_t pwm_init = LL_PWM_DEFAULT_CONFIG;
     p_pwm->p_hal_pwm_update_freq = NULL;
 
     /* Check the parameters */

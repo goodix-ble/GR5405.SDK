@@ -66,8 +66,9 @@
 #define MAX_MPS_DEFUALT                     23              /**< Defualt length of maximal packet size acceptable for device. */
 #define MAX_NB_LECB_DEFUALT                 10              /**< Defualt length of maximal number of LE Credit based connection. */
 #define MAX_TX_OCTET_DEFUALT                251             /**< Default maximum transmitted number of payload octets. */
-#define MAX_TX_TIME_DEFUALT                 2120            /**< Defualt maximum packet transmission time. */
-
+#define MAX_TX_TIME_DEFUALT                 17040           /**< Defualt maximum packet transmission time. */
+#define MAX_RX_OCTET_DEFUALT                251             /**< Default maximum received number of payload octets. */
+#define MAX_RX_TIME_DEFUALT                 17040           /**< Defualt maximum packet recevie time (us). */
 #define THS_UUID_LEN                        16              /**< Defualt UUID length of thoughput. */
 /*
  * GLOBAL VARIABLE DEFINITIONS
@@ -127,6 +128,9 @@ static void gap_params_init(void)
 
     error_code = ble_gap_data_length_set(MAX_TX_OCTET_DEFUALT, MAX_TX_TIME_DEFUALT);
     APP_ERROR_CHECK(error_code);
+
+    extern void ble_rx_data_len_set(uint16_t rx_time, uint16_t rx_octets);
+    ble_rx_data_len_set(MAX_RX_TIME_DEFUALT, MAX_RX_OCTET_DEFUALT);
 
     ble_gap_pref_phy_set(BLE_GAP_PHY_ANY, BLE_GAP_PHY_ANY);
 }

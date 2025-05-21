@@ -58,14 +58,17 @@ extern void BusFault_Handler(void);
 extern void UsageFault_Handler(void);
 extern void SecureFault_Handler(void);
 
+#ifndef SYS_FAULT_TRACE_ENABLE
+#define SYS_FAULT_TRACE_ENABLE    0
+#endif
+
 /**
  ****************************************************************************************
  * @brief  hardfault Interrupt Handler
  * @retval void
  ****************************************************************************************
  */
-#ifdef SYS_FAULT_TRACE_ENABLE
-
+#if SYS_FAULT_TRACE_ENABLE
 __WEAK void app_log_flush(void)
 {
 }
@@ -335,7 +338,6 @@ __WEAK void HardFault_Handler (void)
 #endif
 
 #else /*SYS_FAULT_TRACE_ENABLE*/
-
 SECTION_RAM_CODE __WEAK void HardFault_Handler (void)
 {
     for (;;)

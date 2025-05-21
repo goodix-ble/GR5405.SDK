@@ -75,7 +75,7 @@ static const app_sleep_callbacks_t pwm_sleep_cb =
  * LOCAL FUNCTION DEFINITIONS
  *****************************************************************************************
  */
-bool pwm_prepare_for_sleep(void)
+static bool pwm_prepare_for_sleep(void)
 {
     hal_pwm_state_t state;
     uint32_t i;
@@ -107,7 +107,7 @@ bool pwm_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE void pwm_wake_up_ind(void)
+static SECTION_RAM_CODE void pwm_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     uint32_t i;

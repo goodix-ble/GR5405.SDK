@@ -101,6 +101,11 @@ typedef enum
     PDM_PWR_ID,
 #endif
     MPU_PWR_ID,
+#if defined SOC_GR5410
+    SPIS_PWR_ID,
+    CAN_PWR_ID,
+    LIN_PWR_ID,
+#endif
     PWR_ID_MAX,
 } pwr_id_t;
 /** @} */

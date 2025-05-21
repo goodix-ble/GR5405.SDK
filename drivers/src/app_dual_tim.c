@@ -66,7 +66,7 @@ static const uint32_t    s_dual_tim_instance[APP_DUAL_TIM_ID_MAX] = { DUAL_TIMER
 
 static dual_tim_env_t *p_dual_tim_env[APP_DUAL_TIM_ID_MAX];
 
-const static app_sleep_callbacks_t dual_tim_sleep_cb =
+static const app_sleep_callbacks_t dual_tim_sleep_cb =
 {
     .app_prepare_for_sleep = dual_tim_prepare_for_sleep,
     .app_wake_up_ind       = dual_tim_wake_up_ind,
@@ -114,7 +114,7 @@ static bool dual_tim_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void dual_tim_wake_up_ind(void)
+static SECTION_RAM_CODE void dual_tim_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     for (uint32_t i = 0; i < APP_DUAL_TIM_ID_MAX; i++)
@@ -164,6 +164,10 @@ static void app_dual_tim_event_call(dual_timer_handle_t *p_dual_tim, app_dual_ti
     {
         id = APP_DUAL_TIM_ID_1;
     }
+    else
+    {
+        // Nothing to do.
+    }
 
 #ifdef APP_DUAL_TIM_IO_ENABLE
     if (evt_type == APP_DUAL_TIM_EVT_DONE)
@@ -206,6 +210,10 @@ static void app_dual_tim_event_call(dual_timer_handle_t *p_dual_tim, app_dual_ti
     {
         dual_tim_evt = APP_DUAL_TIM_EVT_IOC_ACT_C2;
     }
+    else
+    {
+        // Nothing to do.
+    }
 #else
     if (evt_type == APP_DUAL_TIM_EVT_DONE)
     {
@@ -246,7 +254,8 @@ static uint16_t dual_timer_gpio_config(dual_timer_io_ctrl_cfg_t *io_crtl_cfg, ap
                 io_init.mux  = APP_IO_MUX_51;
                 break;
             default:
-                return APP_DRV_ERR_INVALID_PARAM;
+                err_code = APP_DRV_ERR_INVALID_PARAM;
+                break;
         }
     }
     else if (id == APP_DUAL_TIM_ID_1)
@@ -263,7 +272,8 @@ static uint16_t dual_timer_gpio_config(dual_timer_io_ctrl_cfg_t *io_crtl_cfg, ap
                 io_init.mux  = APP_IO_MUX_54;
                 break;
             default:
-                return APP_DRV_ERR_INVALID_PARAM;
+                err_code = APP_DRV_ERR_INVALID_PARAM;
+                break;
         }
     }
     else
@@ -272,11 +282,14 @@ static uint16_t dual_timer_gpio_config(dual_timer_io_ctrl_cfg_t *io_crtl_cfg, ap
     }
 #endif
 
-    io_init.pull = APP_IO_NOPULL;
-    io_init.mode = APP_IO_MODE_MUX;
-    io_init.pin  = pin_cfg->pin;
-    err_code = app_io_init(pin_cfg->type, &io_init);
-    APP_DRV_ERR_CODE_CHECK(err_code);
+    if (APP_DRV_SUCCESS == err_code)
+    {
+        io_init.pull = APP_IO_NOPULL;
+        io_init.mode = APP_IO_MODE_MUX;
+        io_init.pin  = pin_cfg->pin;
+        err_code = app_io_init(pin_cfg->type, &io_init);
+        APP_DRV_ERR_CODE_CHECK(err_code);
+    }
 
     return err_code;
 }
@@ -597,6 +610,7 @@ uint16_t app_dual_tim_io_crtl_config(app_dual_tim_id_t id, app_dual_tim_io_crtl_
             memcpy(&p_dual_tim_env[id]->chc_pin_cfg, &io_crtl_params->pin_cfg, sizeof(app_dual_tim_pin_t));
             break;
         default:
+            //lint -e9077 In the default section, return directly to save code size.
             return APP_DRV_ERR_INVALID_PARAM;
     }
 

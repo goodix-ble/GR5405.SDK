@@ -74,6 +74,7 @@ typedef struct {
  */
 static bool uart_prepare_for_sleep(void);
 static void uart_wake_up_ind(void);
+//lint -e752 The UARTx_IRQHandler is implemented through macro concatenation, which is not recognized by MISRA.
 void UART0_IRQHandler(void);
 void UART1_IRQHandler(void);
 void UART2_IRQHandler(void);
@@ -170,7 +171,7 @@ static bool uart_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void uart_wake_up_ind(void)
+static SECTION_RAM_CODE void uart_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     uint32_t i;
@@ -214,8 +215,10 @@ void uart_wake_up(app_uart_id_t id)
 }
 #endif
 
+//lint -e19 -e522 The function app_uart_dma_start_transmit_async is defined as a weak function, and its actual implementation will be found in app_uart_dma.c.
 __WEAK uint16_t app_uart_dma_start_transmit_async(app_uart_id_t id)
 {
+    UNUSED(id);
     return 0;
 };
 
@@ -640,7 +643,10 @@ void app_uart_flush(app_uart_id_t id)
                             + p_uart_env[id]->handle.init.stop_bits + 1
                             + (p_uart_env[id]->handle.init.parity & 1);
 
-        while(!ll_uart_is_active_flag_tfe(p_uart_env[id]->handle.p_instance));
+        while (!ll_uart_is_active_flag_tfe(p_uart_env[id]->handle.p_instance))
+        {
+            // Nothing to do.
+        }
 
         if (p_uart_env[id]->is_dma_tx_mode == false)
         {
@@ -662,26 +668,32 @@ void app_uart_flush(app_uart_id_t id)
                    (tx_wait_count <= data_width * TX_ONCE_MAX_SIZE * (SystemCoreClock/p_uart_env[id]->handle.init.baud_rate)));
         }
 
-        do{
+        do {
             items_count = ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer);
-            while(items_count)
+            while (items_count)
             {
                 uint8_t send_char;
 
                 ring_buffer_read(&p_uart_env[id]->tx_ring_buffer, &send_char, 1);
 
-                while(!ll_uart_is_active_flag_tfnf(p_uart_env[id]->handle.p_instance));
+                while (!ll_uart_is_active_flag_tfnf(p_uart_env[id]->handle.p_instance))
+                {
+                    // Nothing to do.
+                }
 
                 ll_uart_transmit_data8(p_uart_env[id]->handle.p_instance, send_char);
 
                 items_count--;
             }
-        } while(ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer));
+        } while (ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer));
 
-        while((HAL_IS_BIT_SET(p_uart->p_instance->LSR, LL_UART_LSR_TEMT) ? SET : RESET) == RESET);
+        while ((HAL_IS_BIT_SET(p_uart->p_instance->LSR, LL_UART_LSR_TEMT) ? SET : RESET) == RESET)
+        {
+            // Nothing to do.
+        }
 
         GLOBAL_EXCEPTION_DISABLE();
-        if(ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer))
+        if (ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer))
         {
             /* Enable the UART Transmit Data Register Empty Interrupt */
             __HAL_UART_ENABLE_IT(p_uart, UART_IT_THRE);
@@ -714,7 +726,10 @@ void app_uart_assert_flush(app_uart_id_t id)
                         + p_uart_env[id]->handle.init.stop_bits + 1
                         + (p_uart_env[id]->handle.init.parity & 1);
 
-    while(!ll_uart_is_active_flag_tfe(p_uart_env[id]->handle.p_instance));
+    while (!ll_uart_is_active_flag_tfe(p_uart_env[id]->handle.p_instance))
+    {
+        // Nothing to do.
+    }
 
     if (p_uart_env[id]->is_dma_tx_mode == false)
     {
@@ -736,23 +751,29 @@ void app_uart_assert_flush(app_uart_id_t id)
                (tx_wait_count <= data_width * TX_ONCE_MAX_SIZE * (SystemCoreClock/p_uart_env[id]->handle.init.baud_rate)));
     }
 
-    do{
+    do {
         items_count = ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer);
-        while(items_count)
+        while (items_count)
         {
             uint8_t send_char;
 
             ring_buffer_read(&p_uart_env[id]->tx_ring_buffer, &send_char, 1);
 
-            while(!ll_uart_is_active_flag_tfnf(p_uart_env[id]->handle.p_instance));
+            while (!ll_uart_is_active_flag_tfnf(p_uart_env[id]->handle.p_instance))
+            {
+                // Nothing to do.
+            }
 
             ll_uart_transmit_data8(p_uart_env[id]->handle.p_instance, send_char);
 
             items_count--;
         }
-    } while(ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer));
+    } while (ring_buffer_items_count_get(&p_uart_env[id]->tx_ring_buffer));
 
-    while((HAL_IS_BIT_SET(p_uart->p_instance->LSR, LL_UART_LSR_TEMT) ? SET : RESET) == RESET);
+    while ((HAL_IS_BIT_SET(p_uart->p_instance->LSR, LL_UART_LSR_TEMT) ? SET : RESET) == RESET)
+    {
+        // Nothing to do.
+    }
 }
 
 uint16_t app_uart_abort(app_uart_id_t id)

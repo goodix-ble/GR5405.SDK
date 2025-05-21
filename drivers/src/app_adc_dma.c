@@ -56,10 +56,15 @@ extern void adc_wake_up(void);
  *****************************************************************************************
  */
 extern adc_env_t *p_adc_env;
+#ifdef APP_ADC_GPADC_ENABLE
+extern uint32_t s_io_to_input_src[LL_GPADC_SGL_CH_7 + 3];
+#endif
 
 static uint16_t adc_config_dma(app_adc_params_t *p_params)
 {
-    app_dma_params_t dma_params = { 0 };
+    app_dma_params_t dma_params = {
+        .p_instance = NULL,
+    };
 
     dma_params.p_instance                = p_params->dma_cfg.dma_instance;
     if (dma_params.p_instance != DMA0)
@@ -67,12 +72,23 @@ static uint16_t adc_config_dma(app_adc_params_t *p_params)
         return APP_DRV_ERR_INVALID_PARAM;
     }
     dma_params.channel_number            = p_params->dma_cfg.dma_channel;
+#ifdef APP_ADC_SNSADC_ENABLE
     dma_params.init.src_request          = DMA0_REQUEST_SNSADC;
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    dma_params.init.src_request          = DMA_REQUEST_GPADC;
+#endif
     dma_params.init.direction            = DMA_PERIPH_TO_MEMORY;
     dma_params.init.src_increment        = DMA_SRC_NO_CHANGE;
     dma_params.init.dst_increment        = DMA_DST_INCREMENT;
+#ifdef APP_ADC_SNSADC_ENABLE
     dma_params.init.src_data_alignment   = DMA_SDATAALIGN_WORD;
     dma_params.init.dst_data_alignment   = DMA_DDATAALIGN_WORD;
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    dma_params.init.src_data_alignment   = DMA_SDATAALIGN_HALFWORD;
+    dma_params.init.dst_data_alignment   = DMA_DDATAALIGN_HALFWORD;
+#endif
 #ifdef APP_DMA_MODE_ENABLE
     dma_params.init.mode                 = DMA_NORMAL;
 #endif
@@ -138,6 +154,115 @@ uint16_t app_adc_dma_deinit(void)
 
     return APP_DRV_SUCCESS;
 }
+
+#ifdef APP_ADC_GPADC_ENABLE
+
+uint16_t app_adc_dma_conversion_async(uint16_t *p_data, uint32_t length)
+{
+    hal_status_t err_code;
+
+    if ((p_adc_env == NULL) || (p_adc_env->adc_state == APP_ADC_INVALID))
+    {
+        return APP_DRV_ERR_NOT_INIT;
+    }
+
+    if (p_data == NULL || length == 0)
+    {
+        return APP_DRV_ERR_INVALID_PARAM;
+    }
+
+    if (p_adc_env->adc_dma_state == APP_ADC_DMA_INVALID)
+    {
+        return APP_DRV_ERR_INVALID_MODE;
+    }
+
+#ifdef APP_DRIVER_WAKEUP_CALL_FUN
+    adc_wake_up();
+#endif
+
+    err_code = hal_adc_start_dma(&p_adc_env->handle, p_data, length);
+    HAL_ERR_CODE_CHECK(err_code);
+
+    return APP_DRV_SUCCESS;
+}
+
+uint16_t app_adc_dma_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_node, uint32_t total_nodes)
+{
+    hal_status_t err_code;
+    uint32_t check_node_num;
+    app_adc_sample_node_t *p_check_node;
+
+    if ((p_adc_env == NULL) || (p_adc_env->adc_state == APP_ADC_INVALID))
+    {
+        return APP_DRV_ERR_NOT_INIT;
+    }
+
+    if (p_begin_node == NULL || total_nodes == 0)
+    {
+        return APP_DRV_ERR_INVALID_PARAM;
+    }
+
+    if (p_adc_env->adc_dma_state == APP_ADC_DMA_INVALID)
+    {
+        return APP_DRV_ERR_INVALID_MODE;
+    }
+
+    check_node_num = total_nodes;
+    p_check_node = p_begin_node;
+    while (check_node_num)// check samle link node
+    {
+        if( (p_check_node->channel > ADC_INPUT_SRC_CAL) || (p_check_node->p_buf == NULL) || ((check_node_num>1) && (p_check_node->next == NULL)))
+        {
+            return APP_DRV_ERR_INVALID_PARAM;
+        }
+
+        if (--check_node_num)
+        {
+            p_check_node = p_check_node->next;
+        }
+    }
+
+#ifdef APP_DRIVER_WAKEUP_CALL_FUN
+    adc_wake_up();
+#endif
+
+    if (HAL_ADC_STATE_READY != hal_adc_get_state(&p_adc_env->handle))
+    {
+        return APP_DRV_ERR_BUSY;
+    }
+
+    app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
+    io_init.mode = APP_IO_MODE_ANALOG;
+    io_init.mux  = APP_ADC_IO_MUX;
+    io_init.pull = APP_IO_NOPULL;
+    check_node_num = total_nodes;
+    p_check_node = p_begin_node;
+    while (check_node_num)// Configure the IO for all nodes.
+    {
+        if (s_io_to_input_src[p_check_node->channel])
+        {
+            io_init.pin  = s_io_to_input_src[p_check_node->channel];
+            app_io_init(APP_ADC_IO_TYPE, &io_init);
+        }
+
+        if (--check_node_num)
+        {
+            p_check_node = p_check_node->next;
+        }
+    }
+
+    p_adc_env->handle.init.channel_n = p_begin_node->channel;
+    err_code = hal_adc_init(&p_adc_env->handle);
+    HAL_ERR_CODE_CHECK(err_code);
+
+    p_adc_env->p_current_sample_node = p_begin_node;
+    p_adc_env->multi_channel = total_nodes;
+    err_code = hal_adc_start_dma(&p_adc_env->handle, p_begin_node->p_buf, p_begin_node->len);
+    HAL_ERR_CODE_CHECK(err_code);
+
+    return APP_DRV_SUCCESS;
+}
+#endif
 
 #endif
 

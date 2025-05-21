@@ -108,10 +108,9 @@ do {                                                                            
  * LOCAL FUNCTION DECLARATION
  *****************************************************************************************
  */
-extern bool spi_prepare_for_sleep(void);
-extern void spi_sleep_canceled(void);
-extern void spi_wake_up_ind(void);
+#ifdef APP_DRIVER_WAKEUP_CALL_FUN
 extern void spi_wake_up(app_spi_id_t id);
+#endif
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -125,7 +124,9 @@ extern spi_env_t  *p_spi_env[APP_SPI_ID_MAX];
  */
 static uint16_t app_spi_config_dma_tx(app_spi_params_t *p_params)
 {
-    app_dma_params_t tx_dma_params = { 0 };
+    app_dma_params_t tx_dma_params = {
+        .p_instance = NULL,
+    };
 
     tx_dma_params.p_instance                 = p_params->dma_cfg.tx_dma_instance;
     tx_dma_params.channel_number             = p_params->dma_cfg.tx_dma_channel;
@@ -198,7 +199,9 @@ static uint16_t app_spi_config_dma_tx(app_spi_params_t *p_params)
 
 static uint16_t app_spi_config_dma_rx(app_spi_params_t *p_params)
 {
-    app_dma_params_t rx_dma_params = { 0 };
+    app_dma_params_t rx_dma_params = {
+        .p_instance = NULL,
+    };
 
     rx_dma_params.p_instance                 = p_params->dma_cfg.rx_dma_instance;
     rx_dma_params.channel_number             = p_params->dma_cfg.rx_dma_channel;

@@ -177,7 +177,7 @@ static bool i2c_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void i2c_wake_up_ind(void)
+static SECTION_RAM_CODE void i2c_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     for (uint32_t i = 0; i < APP_I2C_ID_MAX; i++)
@@ -471,6 +471,7 @@ uint16_t app_i2c_receive_sync(app_i2c_id_t id, uint16_t target_address, uint8_t 
             break;
 
         default:
+            // Nothing to do.
             break;
     }
 
@@ -521,6 +522,7 @@ uint16_t app_i2c_receive_async(app_i2c_id_t id, uint16_t target_address, uint8_t
                 break;
 
             default:
+                // Nothing to do.
                 break;
         }
 
@@ -579,6 +581,7 @@ uint16_t app_i2c_transmit_sync(app_i2c_id_t id, uint16_t target_address, uint8_t
             break;
 
         default:
+            // Nothing to do.
             break;
     }
 
@@ -629,6 +632,7 @@ uint16_t app_i2c_transmit_async(app_i2c_id_t id, uint16_t target_address, uint8_
                 break;
 
             default:
+                // Nothing to do.
                 break;
         }
 
@@ -865,6 +869,7 @@ uint16_t app_i2c_transmit_receive_sync(app_i2c_id_t id, uint16_t dev_address, ui
             break;
 
         default:
+            // Nothing to do.
             break;
     }
 
@@ -961,6 +966,7 @@ void hal_i2c_abort_cplt_callback(i2c_handle_t *p_i2c)
     app_i2c_event_call(p_i2c, APP_I2C_ABORT);
 }
 
+//lint -e9024 -e9023 The macro concatenation feature of the C language is used here.
 #define I2C_HANDLER(index, val) \
 SECTION_RAM_CODE void I2C##index##_IRQHandler(void)\
 {\

@@ -74,6 +74,7 @@ extern "C" {
 typedef enum
 {
     APP_ADC_EVT_CONV_CPLT,           /**< Conversion completed by ADC peripheral. */
+    APP_ADC_EVT_ERROR,               /**< Error reported by ADC peripheral. */
 } app_adc_evt_type_t;
 
 /**@brief App adc state types. */
@@ -136,6 +137,9 @@ typedef struct
 typedef struct
 {
     app_adc_evt_type_t  type; /**< Type of event. */
+#ifdef APP_ADC_GPADC_ENABLE
+    uint32_t error_code;      /**< ADC Error code. */
+#endif
 } app_adc_evt_t;
 
 /** @} */
@@ -175,7 +179,7 @@ typedef struct
     dma_id_t                dma_id;                    /**< DMA id definition . */
     app_adc_state_t         adc_state;                 /**< ADC state types. */
     app_adc_dma_state_t     adc_dma_state;             /**< ADC dma state types. */
-    app_adc_sample_node_t *p_current_sample_node;      /**< ADC sample-node definition. */
+    app_adc_sample_node_t   *p_current_sample_node;    /**< ADC sample-node definition. */
     uint32_t multi_channel;                            /**< multi channel definition. */
 } adc_env_t;
 
@@ -237,7 +241,8 @@ uint16_t app_adc_conversion_sync(uint16_t *p_data, uint32_t length, uint32_t tim
 
 /**
  ****************************************************************************************
- * @brief  DMA for conversion.
+ * @brief  Async for conversion.
+ *         Note: SNSADC uses DMA for asynchronous transmission; GPADC uses interrupts for asynchronous transmission.
  *
  * @param[in]  p_data: Pointer to data buffer which to storage ADC conversion results.
  * @param[in]  length: Length of data buffer,  ranging between 0 and 4095.
@@ -261,6 +266,7 @@ uint16_t app_adc_conversion_async(uint16_t *p_data, uint32_t length);
  */
 uint16_t app_adc_voltage_intern(uint16_t *inbuf, double *outbuf, uint32_t buflen);
 
+#ifdef APP_ADC_SNSADC_ENABLE
 /**
  ****************************************************************************************
  * @brief  Convert the ADC conversion results to a voltage value(external reference).
@@ -274,6 +280,7 @@ uint16_t app_adc_voltage_intern(uint16_t *inbuf, double *outbuf, uint32_t buflen
  ****************************************************************************************
  */
 uint16_t app_adc_voltage_extern(double ref, uint16_t *inbuf, double *outbuf, uint32_t buflen);
+#endif
 
 #ifdef APP_ADC_VBAT_TEMP_CONV_ENABLE
 /**
@@ -314,7 +321,8 @@ adc_handle_t *app_adc_get_handle(void);
 
 /**
  ****************************************************************************************
- * @brief  DMA for multi channels conversion; evt_handler in app_adc_init will callback when all channels finish.
+ * @brief  Async for multi channels conversion; evt_handler in app_adc_init will callback when all channels finish.
+ *         Note: SNSADC uses DMA for asynchronous transmission; GPADC uses interrupts for asynchronous transmission.
  *
  * @param[in]  p_begin_node: Pointer to the multi sample channels list node.
  * @param[in]  total_nodes: total sample channels.

@@ -68,6 +68,11 @@
 #define APP_LOG_TAG_ENABLE              0                          /**< Enable app log tag. */
 #endif
 
+#ifndef APP_LOG_HEX_DUMP_RAW_DATA_ENABLE
+// If APP_LOG_HEX_DUMP_RAW_DATA_ENABLE=1, then calling APP_LOG_RAW_INFO/app_log_hex_dump will not add extra information (parse to ASCII), but will directly print the raw data.
+#define APP_LOG_HEX_DUMP_RAW_DATA_ENABLE  0                        /**< Enable app log hex dump raw data. */
+#endif
+
 #define APP_LOG_LOCK()                  LOCAL_INT_DISABLE(BLE_IRQn) /**< App log lock. */
 #define APP_LOG_UNLOCK()                LOCAL_INT_RESTORE()         /**< APP log unlock. */
 
@@ -75,8 +80,12 @@
     #define APP_LOG_TAG                 "NO_TAG"                   /**< Default app log tag. */
 #endif
 
+#ifndef APP_LOG_LINE_BUF_SIZE
 #define APP_LOG_LINE_BUF_SIZE           256                        /**< Buffer size for every line's log. */
+#endif
+#ifndef APP_LOG_PER_LINE_HEX_DUMP_SIZE
 #define APP_LOG_PER_LINE_HEX_DUMP_SIZE  8                          /**< Hex char dump size in per line. */
+#endif
 #define APP_LOG_SEVERITY_LEVEL          APP_LOG_LVL_DEBUG          /**< Default log severity level. */
 #define APP_LOG_TAG_LEN_MAX             20                         /**< Maximum length of output filter's tag. */
 #define APP_LOG_LINE_NB_LEN_MAX         5                          /**< Maximum length of output line number. */

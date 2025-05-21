@@ -131,7 +131,11 @@ static const uint16_t s_io_mode[IO_GROUP_TYPE_MAX][APP_IO_MODE_MAX] =
 #endif
         GPIO_MODE_IT_HIGH,
         GPIO_MODE_IT_LOW,
+#ifdef APP_IO_GPIO_SUPPORT_ANA_MODE
+        GPIO_MODE_ANALOG
+#else
         IO_MODE_NONE
+#endif
     },
 #ifdef APP_IO_AON_GPIO_ENABLE
     {
@@ -237,10 +241,12 @@ void AON_EXT_IRQHandler(void);
 static int get_pin_index(uint32_t pin)
 {
     int index = 0;
-    while ((pin & PIN_MASK) != PIN_MASK)
+    uint32_t pin_temp = pin;
+
+    while ((pin_temp & PIN_MASK) != PIN_MASK)
     {
         index++;
-        pin = pin >> PIN_SHIF;
+        pin_temp = pin_temp >> PIN_SHIF;
     }
     return index;
 }
@@ -283,7 +289,9 @@ uint16_t app_io_init(app_io_type_t type, app_io_init_t *p_init)
             io_config.pin  = p_init->pin;
             p_handle = GET_HANDLE(type);
             if ((!(p_init->pin & APP_IO_PINS_0_15)) || (p_handle == NULL))
-                 return APP_DRV_ERR_INVALID_PARAM;
+            {
+                return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_gpio_init(p_handle, &io_config);
             break;
 #ifdef APP_IO_GR551X_LEGACY_ENABLE
@@ -313,7 +321,9 @@ uint16_t app_io_init(app_io_type_t type, app_io_init_t *p_init)
             aon_io_config.mux  = p_init->mux;
             aon_io_config.pin  = p_init->pin;
             if (!(p_init->pin & APP_AON_IO_PIN_ALL))
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_aon_gpio_init(&aon_io_config);
             break;
 #endif
@@ -337,11 +347,14 @@ uint16_t app_io_init(app_io_type_t type, app_io_init_t *p_init)
             msio_config.mux  = p_init->mux;
             msio_config.pin  = p_init->pin;
             if (!(p_init->pin & APP_MSIO_IO_PIN_ALL))
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_msio_init(MSIOA, &msio_config);
             break;
 #endif
         default:
+            //lint -e9077 In the default section, return directly to save code size.
             return APP_DRV_ERR_INVALID_TYPE;
     }
 
@@ -359,7 +372,9 @@ uint16_t app_io_deinit(app_io_type_t type, uint32_t pin)
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if ((!(pin & APP_IO_PINS_0_15)) || (p_handle == NULL))
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_gpio_deinit(p_handle, pin);
             break;
 #ifdef APP_IO_GR551X_LEGACY_ENABLE
@@ -378,7 +393,9 @@ uint16_t app_io_deinit(app_io_type_t type, uint32_t pin)
 #ifdef APP_IO_AON_GPIO_ENABLE
         case APP_IO_TYPE_AON:
             if (!(pin & APP_AON_IO_PIN_ALL))
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_aon_gpio_deinit(pin);
             break;
 #endif
@@ -386,7 +403,9 @@ uint16_t app_io_deinit(app_io_type_t type, uint32_t pin)
 #ifdef APP_IO_MSIO_ENABLE
         case APP_IO_TYPE_MSIO:
             if (!(pin & APP_MSIO_IO_PIN_ALL))
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_msio_deinit(MSIOA, pin);
             break;
 #endif
@@ -436,6 +455,7 @@ app_io_pin_state_t app_io_read_pin(app_io_type_t type, uint32_t pin)
             break;
 #endif
         default:
+            // Nothing to do.
             break;
     }
 
@@ -458,7 +478,9 @@ uint16_t app_io_write_pin(app_io_type_t type, uint32_t pin, app_io_pin_state_t p
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if (p_handle == NULL)
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_gpio_write_pin(p_handle, pin, (gpio_pin_state_t)pin_state);
             break;
 #ifdef APP_IO_GR551X_LEGACY_ENABLE
@@ -502,7 +524,9 @@ uint16_t app_io_toggle_pin(app_io_type_t type, uint32_t pin)
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if (p_handle == NULL)
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
             hal_gpio_toggle_pin(p_handle, pin);
             break;
 #ifdef APP_IO_GR551X_LEGACY_ENABLE
@@ -553,7 +577,9 @@ uint16_t app_io_set_speed(app_io_type_t type, uint32_t pin, app_io_speed_t speed
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if (p_handle == NULL)
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
 
             io_speed = s_io_speed[0][speed];
             ll_gpio_set_pin_speed(p_handle, pin, io_speed);
@@ -598,7 +624,9 @@ uint16_t app_io_set_strength(app_io_type_t type, uint32_t pin, app_io_strength_t
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if (p_handle == NULL)
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
 
             io_strength = s_io_strength[0][strength];
             ll_gpio_set_pin_strength(p_handle, pin, io_strength);
@@ -642,7 +670,9 @@ uint16_t app_io_set_intput_type(app_io_type_t type, uint32_t pin, app_io_input_t
         case APP_IO_TYPE_GPIOC:
             p_handle = GET_HANDLE(type);
             if (p_handle == NULL)
+            {
                 return APP_DRV_ERR_INVALID_PARAM;
+            }
 
             io_input_type = s_io_input_type[0][input_type];
             ll_gpio_set_pin_input_type(p_handle, pin, io_input_type);
@@ -737,7 +767,9 @@ uint16_t app_io_event_register_cb(app_io_type_t type, app_io_init_t *p_init, app
                 case APP_IO_TYPE_GPIOC:
                     irq = GET_PIN_IRQ(type);
                     if (irq == IRQ_NUM_NONE)
+                    {
                         return APP_DRV_ERR_INVALID_PARAM;
+                    }
                     GLOBAL_EXCEPTION_DISABLE();
                     gpio_evt_info[pin_index + base_pins].callback_func = io_evt_cb;
                     gpio_evt_info[pin_index + base_pins].arg = arg;
@@ -841,7 +873,9 @@ void hal_gpio_exti_callback(gpio_regs_t *GPIOx, uint16_t gpio_pin)
     for (idx = 0; idx < IO_GROUP_MAX; idx++)
     {
         if (GPIOx != io_info[idx].handle)
+        {
             continue;
+        }
 
         pin_index += idx * IO_GROUP_MAX_PINS;
 
@@ -868,7 +902,9 @@ void hal_gpio_exti_callback(gpio_regs_t *GPIOx, uint16_t gpio_pin)
 #endif
         io_evt.arg  = gpio_evt_info[pin_index].arg;
         if (gpio_evt_info[pin_index].callback_func != NULL)
+        {
             gpio_evt_info[pin_index].callback_func(&io_evt);
+        }
     }
 }
 
@@ -888,7 +924,9 @@ void hal_aon_gpio_callback(uint16_t aon_gpio_pin)
             io_evt.pin = 0x1U << pin_index;
             io_evt.arg = aon_evt_info[pin_index].arg;
             if (aon_evt_info[pin_index].callback_func != NULL)
+            {
                 aon_evt_info[pin_index].callback_func(&io_evt);
+            }
         }
         pin_index++;
         aon_pin >>= PIN_SHIF;

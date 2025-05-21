@@ -112,6 +112,7 @@ enum  BLE_GAPM_EVTS
     BLE_GAPM_EVT_SCAN_MONI_EVT_REPORT,                /**< Scan monitor event report event. */
     BLE_GAPM_EVT_IDEN_ADDR_REPORT,                    /**< Identity address report event. */
     BLE_GAPM_EVT_DTM_TEST_END_REPORT,                 /**< DTM test end report event. */
+    BLE_GAPM_EVT_RSLV_RESULT_REPORT,                  /**< Resolve rpa address result report event. */
     BLE_GAPM_EVT_MAX,
 };
 

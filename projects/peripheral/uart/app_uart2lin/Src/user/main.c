@@ -46,6 +46,7 @@
 #include "custom_config.h"
 #include "patch.h"
 #include "app_log.h"
+#include "app_assert.h"
 #include "app_uart2lin.h"
 
 /*
@@ -64,12 +65,7 @@
 #define DATA_LEN_LIN_MASTER_TO_SLAVE1 (8U)
 #define DATA_LEN_LIN_SLAVE1_TO_MASTER (6U)
 
-// SLAVE_DELAY_TIME_MS < MASTER_DELAY_TIME_MS : the slave is able to process the head sent by the master promptly.
-// The delay time can theoretically be set to 0. It is recommended to adjust it based on the interaction frequency of the LIN bus in actual applications.
-// When the delay time is short, MAX_CALL_FUNC_FAIL_TIMES needs to be appropriately increased.
-#define MASTER_DELAY_TIME_MS          (10)
-#define SLAVE_DELAY_TIME_MS           (5)
-#define MAX_CALL_FUNC_FAIL_TIMES      (200)
+#define LIN_TRANS_CYCLE               (10)  // ms
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -141,6 +137,13 @@ static void uart2lin_config(void)
     if (!app_uart2lin_init(&uart2lin_config))
     {
         APP_LOG_INFO("uart2lin init fail!!!");
+        APP_ASSERT_CHECK(false);
+    }
+
+    if (!app_uart2lin_rx_head())
+    {
+        APP_LOG_INFO("uart2lin rx fail!!!");
+        APP_ASSERT_CHECK(false);
     }
 }
 
@@ -207,17 +210,20 @@ void app_uart2lin_rx_head_cb(app_uart2lin_env_t *p_uart2lin)
 
 void app_uart2lin_tx_response_cb(app_uart2lin_env_t *p_uart2lin)
 {
+    (void)app_uart2lin_rx_head();
     APP_LOG_INFO("tx response success, pid = 0x%x", p_uart2lin->rx_pid);
 }
 
 void app_uart2lin_rx_response_cb(app_uart2lin_env_t *p_uart2lin)
 {
+    (void)app_uart2lin_rx_head();
     APP_LOG_INFO("rx response success: ");
     APP_LOG_HEX_DUMP(s_uart2lin_rx_data, p_uart2lin->rx_len);
 }
 
 void app_uart2lin_error_cb(app_uart2lin_env_t *p_uart2lin)
 {
+    app_uart2lin_force_rx_head();
     APP_LOG_ERROR("uart2lin error , error_code = 0x%x", p_uart2lin->error_code);
 }
 
@@ -227,11 +233,6 @@ void app_uart2lin_error_cb(app_uart2lin_env_t *p_uart2lin)
  */
 int main (void)
 {
-    // When bus anomalies occur, they may cause UART2LIN to be unable to exit the RX/TX state.
-    // For example, during normal operation, if the slave node is reset while controlling the bus, it may prevent the master from correctly transmitting data on the bus.
-    // In this case, the master cannot exit the RX state, so it needs to add monitoring mechanisms.
-    static uint32_t s_call_func_fail_times = 0;
-
     // Initialize user peripherals.
     app_periph_init();
 
@@ -243,31 +244,10 @@ int main (void)
     // loop
     while (1)
     {
-        if (app_uart2lin_rx_head())
-        {
-            s_call_func_fail_times = 0;
-            if (MASTER_NODE_ID == s_local_node_id)
-            {
-                uart2lin_master_send_head();
-            }
-        }
-        else
-        {
-            if ((++s_call_func_fail_times) >= MAX_CALL_FUNC_FAIL_TIMES)
-            {
-                app_uart2lin_abort_rx();
-                app_uart2lin_abort_tx();
-            }
-        }
-
         if (MASTER_NODE_ID == s_local_node_id)
         {
-            delay_ms(MASTER_DELAY_TIME_MS);
-        }
-        else
-        {
-            // When the LIN Master sends the header, the LIN Slave should be in the receive header state.
-            delay_ms(SLAVE_DELAY_TIME_MS);
+            uart2lin_master_send_head();
+            delay_ms(LIN_TRANS_CYCLE);
         }
     }
 }

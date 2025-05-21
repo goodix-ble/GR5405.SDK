@@ -143,7 +143,7 @@ extern "C" {
   * @param  __FLAG__ Specifies the flag to clear.
   *         This parameter can be one of the following values:
   *            @arg @ref RTC_FLAG_ALARM Alarm Interrupt event
-  *            @arg @ref RTC_FLAG_WRAP  Warp Interrupt event
+  *            @arg @ref RTC_FLAG_WRAP  Wrap Interrupt event
   *            @arg @ref RTC_FLAG_TICK Tick Interrupt event
   * @retval None
   */
@@ -154,7 +154,7 @@ extern "C" {
   * @param  __INTERRUPT__ Specifies the interrupt source to enable.
   *         This parameter can be one of the following values:
   *            @arg @ref RTC_IT_ALARM Alarm Interrupt
-  *            @arg @ref RTC_IT_WRAP  Warp Interrupt
+  *            @arg @ref RTC_IT_WRAP  Wrap Interrupt
   *            @arg @ref RTC_IT_TICK Tick Interrupt
   * @retval None
   */
@@ -165,7 +165,7 @@ extern "C" {
   * @param  __INTERRUPT__ Specifies the interrupt source to disable.
   *         This parameter can be one of the following values:
   *            @arg @ref RTC_IT_ALARM Alarm Interrupt
-  *            @arg @ref RTC_IT_WRAP  Warp Interrupt
+  *            @arg @ref RTC_IT_WRAP  Wrap Interrupt
   *            @arg @ref RTC_IT_TICK Tick Interrupt
   * @retval None
   */
@@ -176,7 +176,7 @@ extern "C" {
   * @param  __FLAG__ Specifies the interrupt source to check.
   *          This parameter can be one of the following values:
   *            @arg @ref RTC_FLAG_ALARM Alarm Interrupt event
-  *            @arg @ref RTC_FLAG_WRAP  Warp Interrupt event
+  *            @arg @ref RTC_FLAG_WRAP  Wrap Interrupt event
   *            @arg @ref RTC_FLAG_TICK Tick Interrupt event
   * @retval The new state of __IT__ (TRUE or FALSE).
   */

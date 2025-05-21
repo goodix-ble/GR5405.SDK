@@ -140,7 +140,7 @@ static bool dma_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void dma_wake_up_ind(void)
+static SECTION_RAM_CODE void dma_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
 #ifdef APP_DMA_GR551X_LEGACY
@@ -329,83 +329,80 @@ dma_id_t app_dma_init(app_dma_params_t *p_params, app_dma_evt_handler_t evt_hand
     soc_register_nvic(DMA1_IRQn, (uint32_t)DMA1_IRQHandler);
 #endif
 
-    if (NULL != p_params)
+    if(!IS_DMA_ALL_INSTANCE(p_params->channel_number))
     {
-        if(!IS_DMA_ALL_INSTANCE(p_params->channel_number))
-        {
-            return -1;
-        }
-        GLOBAL_EXCEPTION_DISABLE();
-        for (i = 0; i < DMA_HANDLE_MAX; i++)
-        {
+        return -1;
+    }
+    GLOBAL_EXCEPTION_DISABLE();
+    for (i = 0; i < DMA_HANDLE_MAX; i++)
+    {
 #ifdef APP_DMA_GR551X_LEGACY
-            if (s_dma_env[i].dma_state == APP_DMA_INVALID || \
-                 s_dma_env[i].handle.channel == p_params->channel_number)
+        if (s_dma_env[i].dma_state == APP_DMA_INVALID || \
+                s_dma_env[i].handle.channel == p_params->channel_number)
 #else
-            if (s_dma_env[i].dma_state == APP_DMA_INVALID || \
-                (s_dma_env[i].handle.p_instance == p_params->p_instance && \
-                 s_dma_env[i].handle.channel == p_params->channel_number))
+        if (s_dma_env[i].dma_state == APP_DMA_INVALID || \
+            (s_dma_env[i].handle.p_instance == p_params->p_instance && \
+                s_dma_env[i].handle.channel == p_params->channel_number))
 #endif
+        {
+            if(HAL_DMA_STATE_BUSY == s_dma_env[i].handle.state)
             {
-                if(HAL_DMA_STATE_BUSY == s_dma_env[i].handle.state)
-                {
-                    i = DMA_HANDLE_MAX;
-                    break;
-                }
-                else
-                {
-                    id = i;
-                    s_dma_env[i].dma_state = APP_DMA_ACTIVITY;
-                    break;
-                }
+                i = DMA_HANDLE_MAX;
+                break;
+            }
+            else
+            {
+                id = i;
+                s_dma_env[i].dma_state = APP_DMA_ACTIVITY;
+                break;
             }
         }
-        GLOBAL_EXCEPTION_ENABLE();
+    }
+    GLOBAL_EXCEPTION_ENABLE();
 
-        if (i < DMA_HANDLE_MAX)
-        {
-            pwr_register_sleep_cb(&dma_sleep_cb, APP_DRIVER_DMA_WAKEUP_PRIORITY, DMA_PWR_ID);
+    if (i < DMA_HANDLE_MAX)
+    {
+        pwr_register_sleep_cb(&dma_sleep_cb, APP_DRIVER_DMA_WAKEUP_PRIORITY, DMA_PWR_ID);
 #ifndef APP_DMA_GR551X_LEGACY
-            s_dma_env[i].handle.p_instance = p_params->p_instance;
+        s_dma_env[i].handle.p_instance = p_params->p_instance;
 #endif
-            s_dma_env[i].handle.channel = p_params->channel_number;
-            memcpy(&s_dma_env[i].handle.init, &p_params->init, sizeof(dma_init_t));
-            s_dma_env[i].handle.xfer_tfr_callback   = dma_tfr_callback;
-            s_dma_env[i].handle.xfer_error_callback = dma_err_callback;
+        s_dma_env[i].handle.channel = p_params->channel_number;
+        memcpy(&s_dma_env[i].handle.init, &p_params->init, sizeof(dma_init_t));
+        s_dma_env[i].handle.xfer_tfr_callback   = dma_tfr_callback;
+        s_dma_env[i].handle.xfer_error_callback = dma_err_callback;
 #ifndef APP_DMA_GR551X_LEGACY
-            s_dma_env[i].handle.xfer_blk_callback   = dma_blk_callback;
+        s_dma_env[i].handle.xfer_blk_callback   = dma_blk_callback;
 #endif
-            s_dma_env[i].handle.xfer_abort_callback = NULL;
-            s_dma_env[i].evt_handler = evt_handler;
+        s_dma_env[i].handle.xfer_abort_callback = NULL;
+        s_dma_env[i].evt_handler = evt_handler;
 #if (DMA_INSTANCE_MAX > 0)
-            if(DMA0 == s_dma_env[i].handle.p_instance)
+        if(DMA0 == s_dma_env[i].handle.p_instance)
+        {
+            if (!NVIC_GetEnableIRQ(DMA0_IRQn))
             {
-                if (!NVIC_GetEnableIRQ(DMA0_IRQn))
-                {
-                    hal_nvic_clear_pending_irq(DMA0_IRQn);
-                    hal_nvic_enable_irq(DMA0_IRQn);
-                }
+                hal_nvic_clear_pending_irq(DMA0_IRQn);
+                hal_nvic_enable_irq(DMA0_IRQn);
             }
+        }
 #endif
 
 #if (DMA_INSTANCE_MAX > 1)
-            else if (DMA1 == s_dma_env[i].handle.p_instance)
+        else if (DMA1 == s_dma_env[i].handle.p_instance)
+        {
+            if (!NVIC_GetEnableIRQ(DMA1_IRQn))
             {
-                if (!NVIC_GetEnableIRQ(DMA1_IRQn))
-                {
-                    hal_nvic_clear_pending_irq(DMA1_IRQn);
-                    hal_nvic_enable_irq(DMA1_IRQn);
-                }
+                hal_nvic_clear_pending_irq(DMA1_IRQn);
+                hal_nvic_enable_irq(DMA1_IRQn);
             }
+        }
 #endif
 
 #ifdef APP_DMA_GR551X_LEGACY
-            hal_nvic_clear_pending_irq(DMA_IRQn);
-            hal_nvic_enable_irq(DMA_IRQn);
+        hal_nvic_clear_pending_irq(DMA_IRQn);
+        hal_nvic_enable_irq(DMA_IRQn);
 #endif
 
-            status = hal_dma_init(&s_dma_env[i].handle);
-        }
+        status = hal_dma_init(&s_dma_env[i].handle);
     }
 
     if (HAL_OK != status)
@@ -433,7 +430,7 @@ uint16_t app_dma_deinit(dma_id_t id)
     GLOBAL_EXCEPTION_DISABLE();
     hal_dma_deinit(&s_dma_env[id].handle);
     s_dma_env[id].dma_state = APP_DMA_INVALID;
-    s_dma_env[id].handle.channel = (dma_channel_t)(-1);
+    s_dma_env[id].handle.channel = DMA_Channel_NUM_MAX;
 
     for (i = 0; i < DMA_HANDLE_MAX; i++)
     {

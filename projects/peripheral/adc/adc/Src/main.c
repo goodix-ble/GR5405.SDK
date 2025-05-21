@@ -64,12 +64,12 @@ double   voltage[TEST_CONV_LENGTH];
 app_adc_params_t adc_params = {
     .pin_cfg = {
         .channel_p = {
-            .type = APP_IO_TYPE_MSIO,
+            .type = APP_ADC_IO_TYPE,
             .mux  = APP_ADC_P_INPUT_PIN_MUX,
             .pin  = APP_ADC_P_INPUT_PIN,
         },
         .channel_n = {
-            .type = APP_IO_TYPE_MSIO,
+            .type = APP_ADC_IO_TYPE,
             .mux  = APP_ADC_N_INPUT_PIN_MUX,
             .pin  = APP_ADC_N_INPUT_PIN,
         },
@@ -81,10 +81,20 @@ app_adc_params_t adc_params = {
     .init = {
         .channel_p  = APP_ADC_P_INPUT_SRC,
         .channel_n  = APP_ADC_N_INPUT_SRC,
+#ifdef APP_ADC_SNSADC_ENABLE
         .input_mode = ADC_INPUT_SINGLE,
         .ref_source = ADC_REF_SRC_BUF_INT,
         .ref_value  = ADC_REF_VALUE_1P6,
         .clock      = ADC_CLK_1M,
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+        .clk_src_sel = ADC_CLOCK_SRC_HFXO,
+        .ovrs_num = ADC_OVRS_1,
+        .ovrs_rshift = ADC_OVRS_NO_RSHIFT,
+        .dwn_samp_rat = ADC_DWN_SMP_1,
+        .pga_gain = ADC_PGA_GAIN_MUL_1,
+        .adc_mode = ADC_MODE_CONT,
+#endif
     },
 };
 
@@ -147,7 +157,9 @@ void temperater_measure(void)
     uint16_t ret = APP_DRV_SUCCESS;
 
     adc_params.init.channel_n = ADC_INPUT_SRC_TMP;
+#ifdef APP_ADC_SNSADC_ENABLE
     adc_params.init.ref_value = ADC_REF_VALUE_0P8;
+#endif
     /* Please initialize DMA in the following order. */
     /* Note: Initialization is not allowed during the transmission process. */
     ret = app_adc_init(&adc_params, app_adc_evt_handler);
@@ -192,7 +204,9 @@ void vbattery_measure(void)
     uint16_t ret = APP_DRV_SUCCESS;
 
     adc_params.init.channel_n = ADC_INPUT_SRC_BAT;
+#ifdef APP_ADC_SNSADC_ENABLE
     adc_params.init.ref_value = ADC_REF_VALUE_0P8;
+#endif
     /* Please initialize DMA in the following order. */
     /* Note: Initialization is not allowed during the transmission process. */
     ret = app_adc_init(&adc_params, app_adc_evt_handler);

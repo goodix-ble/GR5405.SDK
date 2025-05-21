@@ -58,7 +58,7 @@
 typedef enum
 {
     APP_RTC_INVALID = 0,
-    APP_RTC_ACTIVITY,
+    APP_RTC_ACTIVITY
 } app_rtc_state_t;
 
 struct rtc_env_t
@@ -105,9 +105,18 @@ extern float SystemRtcSlowClock;
 uint16_t app_rtc_init(app_rtc_evt_handler_t evt_handler)
 {
     s_rtc_env.evt_handler = evt_handler;
-    s_rtc_env.handle.clock_freq = SystemRtcSlowClock;
 
+#ifdef APP_RTC_NO_LL_CALENDAR_DRIVER
+    s_rtc_env.handle.p_instance = RTC0;
+#endif
+
+#ifdef SYSTEM_RTC_SLOW_CLOCK_ENABLE
+    s_rtc_env.handle.clock_freq = SystemRtcSlowClock;
+#endif
+
+#ifdef APP_RTC_TIME_SYNC_ENABLE
     clock_calib_notify_register(app_rtc_time_sync);
+#endif
 
     s_rtc_env.rtc_state = APP_RTC_ACTIVITY;
 
@@ -122,7 +131,9 @@ uint16_t app_rtc_deinit(void)
         return APP_DRV_ERR_INVALID_ID;
     }
 
-    clock_calib_notify_register(NULL);
+#ifdef APP_RTC_TIME_SYNC_ENABLE
+    clock_calib_notify_unregister(app_rtc_time_sync);
+#endif
 
     s_rtc_env.rtc_state = APP_RTC_INVALID;
 
@@ -209,7 +220,7 @@ void app_rtc_time_sync(float SlowClockFreq)
     hal_calendar_sync_time(&s_rtc_env.handle, SlowClockFreq);
 }
 
-#else
+#else  /* OS_TICK_BASE_RTC_ENABLE */
 
 /*
  * LOCAL FUNCTION DEFINITIONS
@@ -238,6 +249,10 @@ uint16_t app_rtc_init(app_rtc_evt_handler_t evt_handler)
 
 #ifdef SYSTEM_RTC_SLOW_CLOCK_ENABLE
     s_rtc_env.handle.clock_freq = SystemRtcSlowClock;
+#endif
+
+#ifdef APP_RTC_NO_LL_CALENDAR_DRIVER
+    s_rtc_env.handle.p_instance = RTC0;
 #endif
 
     soc_register_nvic(CALENDAR_IRQn, (uint32_t)CALENDAR_IRQHandler);
@@ -273,7 +288,7 @@ uint16_t app_rtc_deinit(void)
     HAL_ERR_CODE_CHECK(err_code);
 
 #ifdef APP_RTC_TIME_SYNC_ENABLE
-    clock_calib_notify_register(NULL);
+    clock_calib_notify_unregister(app_rtc_time_sync);
 #endif
 
     s_rtc_env.rtc_state = APP_RTC_INVALID;
@@ -415,9 +430,9 @@ SECTION_RAM_CODE void CALENDAR_IRQHandler(void)
     hal_calendar_irq_handler(&s_rtc_env.handle);
 }
 
-#endif
+#endif /* OS_TICK_BASE_RTC_ENABLE */
 
-#else
+#else  /* APP_RTC_WORK_AROUND_DISABLE */
 
 #include "ble_time.h"
 /*
@@ -562,7 +577,7 @@ uint16_t app_rtc_setup_tick(uint32_t interval)
     return APP_DRV_SUCCESS;
 }
 
-#endif
+#endif  /* APP_RTC_WORK_AROUND_DISABLE */
 
-#endif
+#endif  /* HAL_CALENDAR_MODULE_ENABLED */
 

@@ -1283,16 +1283,17 @@ __WEAK void hal_uart_irq_handler(uart_handle_t *p_uart)
                     /* Abort DMA RX */
                     if (HAL_OK != hal_dma_abort_it(p_uart->p_dmarx))
                     {
+                        p_uart->dma_rx_mode = DISABLE;
                         /* Call Directly p_uart->p_dmarx->XferAbortCallback function in case of error */
                         p_uart->p_dmarx->xfer_abort_callback(p_uart->p_dmarx);
                     }
                 }
                 else
                 {
+                    p_uart->dma_rx_mode = DISABLE;
                     /* Call user error callback */
                     hal_uart_error_callback(p_uart);
                 }
-                p_uart->dma_rx_mode = DISABLE;
             }
             else
             {

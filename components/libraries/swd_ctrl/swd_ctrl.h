@@ -52,11 +52,11 @@
 #endif
 
 #ifndef PATTERN1
-#define PATTERN1 "1cfe8ea2ff3ad9d1d56fd46e5c1ead5b"
+#define PATTERN1 "...ee¨¹...eW¨¹...FA..(??.ef¨¹ cc"
 #endif
 
 #ifndef PATTERN2
-#define PATTERN2 "272ed79a5252595d67d99a68c0bbd731"
+#define PATTERN2 "APP_W:..Invalid.repeat.CID..In.."
 #endif
 
 #ifndef PATTERN_LENGTH

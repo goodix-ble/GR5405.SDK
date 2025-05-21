@@ -38,11 +38,13 @@
  *****************************************************************************************
  */
 #include <string.h>
+#include <stdint.h>
 #include "app_dma.h"
 #include "app_pwr_mgmt.h"
 #include "grx_sys.h"
 #include "app_adc.h"
 #include "app_drv.h"
+#include "gr_soc.h"
 
 #ifdef HAL_ADC_MODULE_ENABLED
 
@@ -53,6 +55,9 @@
 bool adc_prepare_for_sleep(void);
 void adc_wake_up_ind(void);
 
+//lint -e9075 s_io_to_input_src is declared in app_adc, and in other files, it is referenced with extern.
+//lint -e785 -e9068 The positions in the s_io_to_input_src array that are not assigned initial values will be automatically initialized to 0.
+#ifdef APP_ADC_SNSADC_ENABLE
 #ifdef APP_ADC_INPUT_SRC_GR551X_LEGACY_ENABLE
 const uint32_t s_io_to_input_src[ADC_INPUT_SRC_REF + 1] =
 {
@@ -64,14 +69,21 @@ const uint32_t s_io_to_input_src[ADC_INPUT_SRC_REF + 1] =
     APP_IO_PIN_0, APP_IO_PIN_1, APP_IO_PIN_2, APP_IO_PIN_3, APP_IO_PIN_4, APP_IO_PIN_5, APP_IO_PIN_6, APP_IO_PIN_7
 };
 #endif
-
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+// CH0 - CH7. CH_BAT. CH_TMP
+const uint32_t s_io_to_input_src[LL_GPADC_SGL_CH_7 + 3] =
+{
+    APP_IO_PIN_3, APP_IO_PIN_1, APP_IO_PIN_10, APP_IO_PIN_5, APP_IO_PIN_4, APP_IO_PIN_2, APP_IO_PIN_11, APP_IO_PIN_7
+};
+#endif
 /*
  * LOCAL VARIABLE DEFINITIONS
  *****************************************************************************************
  */
 adc_env_t *p_adc_env = NULL;
 
-const static app_sleep_callbacks_t adc_sleep_cb =
+static const app_sleep_callbacks_t adc_sleep_cb =
 {
     .app_prepare_for_sleep = adc_prepare_for_sleep,
     .app_wake_up_ind       = adc_wake_up_ind
@@ -136,36 +148,50 @@ void adc_wake_up(void)
 }
 #endif
 
-static uint16_t adc_config_gpio(uint32_t input_mode, app_adc_pin_cfg_t pin_cfg, uint32_t ref_source)
+static uint16_t adc_config_gpio(app_adc_params_t *p_params)
 {
     app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
     app_drv_err_t err_code = APP_DRV_SUCCESS;
 
     io_init.mode = APP_IO_MODE_ANALOG;
     io_init.pull   = APP_IO_NOPULL;
-    if (input_mode == LL_ADC_INPUT_DIFFERENTIAL)
+#ifdef APP_ADC_SNSADC_ENABLE
+    if (p_params->init.input_mode == LL_ADC_INPUT_DIFFERENTIAL)
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    if (IS_ADC_DIFF_INPUT(p_params->init.channel_n) && (p_params->init.channel_n == p_params->init.channel_p))
+#endif
     {
-        io_init.pin  = pin_cfg.channel_p.pin;
-        io_init.mux  = pin_cfg.channel_p.mux;
-        err_code = app_io_init(pin_cfg.channel_p.type, &io_init);
+        io_init.pin  = p_params->pin_cfg.channel_p.pin;
+        io_init.mux  = p_params->pin_cfg.channel_p.mux;
+        err_code = app_io_init(p_params->pin_cfg.channel_p.type, &io_init);
         APP_DRV_ERR_CODE_CHECK(err_code);
     }
 
-    io_init.pin  = pin_cfg.channel_n.pin;
-    io_init.mux  = pin_cfg.channel_n.mux;
-    err_code = app_io_init(pin_cfg.channel_n.type, &io_init);
+    io_init.pin  = p_params->pin_cfg.channel_n.pin;
+    io_init.mux  = p_params->pin_cfg.channel_n.mux;
+    err_code = app_io_init(p_params->pin_cfg.channel_n.type, &io_init);
     APP_DRV_ERR_CODE_CHECK(err_code);
 
-    if (ref_source >= LL_ADC_REF_SRC_IO0)
+#ifdef APP_ADC_SNSADC_ENABLE
+    if (p_params->init.ref_source >= LL_ADC_REF_SRC_IO0)
     {
-        io_init.pin  = pin_cfg.extern_ref.pin;
-        io_init.mux  = pin_cfg.extern_ref.mux;
-        err_code = app_io_init(pin_cfg.extern_ref.type, &io_init);
+        io_init.pin  = p_params->pin_cfg.extern_ref.pin;
+        io_init.mux  = p_params->pin_cfg.extern_ref.mux;
+        err_code = app_io_init(p_params->pin_cfg.extern_ref.type, &io_init);
         APP_DRV_ERR_CODE_CHECK(err_code);
     }
+#endif
 
     return err_code;
 }
+
+#ifdef APP_ADC_GPADC_ENABLE
+void GPADC_IRQHandler(void)
+{
+    hal_adc_irq_handler(&p_adc_env->handle);
+}
+#endif
 
 /*
  * GLOBAL FUNCTION DEFINITIONS
@@ -182,7 +208,7 @@ uint16_t app_adc_init(app_adc_params_t *p_params, app_adc_evt_handler_t evt_hand
     }
     p_adc_env = &(p_params->adc_env);
 
-    app_err_code = adc_config_gpio(p_params->init.input_mode, p_params->pin_cfg, p_params->init.ref_source);
+    app_err_code = adc_config_gpio(p_params);
     APP_DRV_ERR_CODE_CHECK(app_err_code);
 
     p_adc_env->evt_handler = evt_handler;
@@ -191,6 +217,12 @@ uint16_t app_adc_init(app_adc_params_t *p_params, app_adc_evt_handler_t evt_hand
     HAL_ERR_CODE_CHECK(hal_err_code);
     hal_err_code = hal_adc_init(&p_adc_env->handle);
     HAL_ERR_CODE_CHECK(hal_err_code);
+
+#ifdef APP_ADC_GPADC_ENABLE
+    soc_register_nvic(GPADC_IRQn, (uint32_t)GPADC_IRQHandler);
+    hal_nvic_clear_pending_irq(GPADC_IRQn);
+    hal_nvic_enable_irq(GPADC_IRQn);
+#endif
 
     pwr_register_sleep_cb(&adc_sleep_cb, APP_DRIVER_ADC_WAKEUP_PRIORITY, ADC_PWR_ID);
     p_adc_env->adc_state = APP_ADC_ACTIVITY;
@@ -219,6 +251,11 @@ uint16_t app_adc_deinit(void)
     {
         p_adc_env = NULL;
     }
+
+#ifdef APP_ADC_GPADC_ENABLE
+    hal_nvic_disable_irq(GPADC_IRQn);
+    hal_nvic_clear_pending_irq(GPADC_IRQn);
+#endif
 
     return APP_DRV_SUCCESS;
 }
@@ -302,16 +339,23 @@ uint16_t app_adc_conversion_async(uint16_t *p_data, uint32_t length)
         return APP_DRV_ERR_INVALID_PARAM;
     }
 
+#ifdef APP_ADC_SNSADC_ENABLE
     if (p_adc_env->adc_dma_state == APP_ADC_DMA_INVALID)
     {
         return APP_DRV_ERR_INVALID_MODE;
     }
+#endif
 
 #ifdef APP_DRIVER_WAKEUP_CALL_FUN
     adc_wake_up();
 #endif
 
+#ifdef APP_ADC_SNSADC_ENABLE
     err_code = hal_adc_start_dma(&p_adc_env->handle, p_data, length);
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    err_code = hal_adc_it_for_conversion(&p_adc_env->handle, p_data, length);
+#endif
     HAL_ERR_CODE_CHECK(err_code);
 
     return APP_DRV_SUCCESS;
@@ -333,7 +377,12 @@ uint16_t app_adc_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_n
         return APP_DRV_ERR_INVALID_PARAM;
     }
 
+#ifdef APP_ADC_SNSADC_ENABLE
     if (p_adc_env->adc_dma_state == APP_ADC_DMA_INVALID)
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    if (p_adc_env->adc_dma_state == APP_ADC_DMA_ACTIVITY)
+#endif
     {
         return APP_DRV_ERR_INVALID_MODE;
     }
@@ -342,7 +391,12 @@ uint16_t app_adc_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_n
     p_check_node = p_begin_node;
     while (check_node_num)//check samle link node
     {
+#ifdef APP_ADC_SNSADC_ENABLE
         if( (p_check_node->channel > ADC_INPUT_SRC_REF) || (p_check_node->p_buf == NULL) || ((check_node_num>1)&&(p_check_node->next == NULL)))
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+        if( (p_check_node->channel > ADC_INPUT_SRC_CAL) || (p_check_node->p_buf == NULL) || ((check_node_num>1)&&(p_check_node->next == NULL)))
+#endif
         {
             return APP_DRV_ERR_INVALID_PARAM;
         }
@@ -364,7 +418,7 @@ uint16_t app_adc_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_n
 
     app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
     io_init.mode = APP_IO_MODE_ANALOG;
-    io_init.mux  = APP_IO_MUX;
+    io_init.mux  = APP_ADC_IO_MUX;
     io_init.pull = APP_IO_NOPULL;
     check_node_num = total_nodes;
     p_check_node = p_begin_node;
@@ -373,7 +427,7 @@ uint16_t app_adc_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_n
         if (s_io_to_input_src[p_check_node->channel])
         {
             io_init.pin  = s_io_to_input_src[p_check_node->channel];
-            app_io_init(APP_IO_TYPE_MSIO, &io_init);
+            app_io_init(APP_ADC_IO_TYPE, &io_init);
         }
 
         if (--check_node_num)
@@ -382,14 +436,21 @@ uint16_t app_adc_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_n
         }
     }
 
+#ifdef APP_ADC_SNSADC_ENABLE
     p_adc_env->handle.init.input_mode = ADC_INPUT_SINGLE;//multi sample must under single mode
+#endif
     p_adc_env->handle.init.channel_n = p_begin_node->channel;
     err_code = hal_adc_init(&p_adc_env->handle);
     HAL_ERR_CODE_CHECK(err_code);
 
     p_adc_env->p_current_sample_node = p_begin_node;
     p_adc_env->multi_channel = total_nodes;
+#ifdef APP_ADC_SNSADC_ENABLE
     err_code = hal_adc_start_dma(&p_adc_env->handle, p_begin_node->p_buf, p_begin_node->len);
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+    err_code = hal_adc_it_for_conversion(&p_adc_env->handle, p_begin_node->p_buf, p_begin_node->len);
+#endif
     HAL_ERR_CODE_CHECK(err_code);
 
     return APP_DRV_SUCCESS;
@@ -412,6 +473,7 @@ uint16_t app_adc_voltage_intern(uint16_t *inbuf, double *outbuf, uint32_t buflen
     return APP_DRV_SUCCESS;
 }
 
+#ifdef APP_ADC_SNSADC_ENABLE
 uint16_t app_adc_voltage_extern(double ref, uint16_t *inbuf, double *outbuf, uint32_t buflen)
 {
     if ((p_adc_env == NULL) || (p_adc_env->adc_state == APP_ADC_INVALID))
@@ -428,6 +490,7 @@ uint16_t app_adc_voltage_extern(double ref, uint16_t *inbuf, double *outbuf, uin
 
     return APP_DRV_SUCCESS;
 }
+#endif
 
 #ifdef APP_ADC_VBAT_TEMP_CONV_ENABLE
 uint16_t app_adc_temperature_conv(uint16_t *inbuf, double *outbuf, uint32_t buflen)
@@ -479,6 +542,7 @@ adc_handle_t *app_adc_get_handle(void)
     return &p_adc_env->handle;
 }
 
+//lint -e14 -e453 The function hal_adc_conv_cplt_callback is a weak symbol in other files.
 void hal_adc_conv_cplt_callback(adc_handle_t *p_adc)
 {
     app_adc_evt_t evt;
@@ -500,15 +564,48 @@ void hal_adc_conv_cplt_callback(adc_handle_t *p_adc)
     else
     {
         p_adc_env->p_current_sample_node = p_adc_env->p_current_sample_node->next;
+#ifdef APP_ADC_SNSADC_ENABLE
         ll_adc_set_channeln(p_adc_env->p_current_sample_node->channel);
-        hal_status_t hal_status = hal_adc_start_dma(&p_adc_env->handle, p_adc_env->p_current_sample_node->p_buf, p_adc_env->p_current_sample_node->len);
+#endif
+#ifdef APP_ADC_GPADC_ENABLE
+        ll_gpadc_set_ch_sel(p_adc_env->p_current_sample_node->channel);
+        if (APP_ADC_DMA_ACTIVITY == p_adc_env->adc_dma_state)
+        {
+#endif
+            hal_status_t hal_status = hal_adc_start_dma(&p_adc_env->handle, p_adc_env->p_current_sample_node->p_buf, p_adc_env->p_current_sample_node->len);
+#ifdef APP_ADC_GPADC_ENABLE
+        }
+        else
+        {
+            hal_status_t hal_status = hal_adc_it_for_conversion(&p_adc_env->handle, p_adc_env->p_current_sample_node->p_buf, p_adc_env->p_current_sample_node->len);
+        }
+#endif
+        //lint -e438 -e529 hal_status is used for ASSERT checks.
         APP_DRV_ASSERT(HAL_OK == hal_status);
     }
 }
 
+#ifdef APP_ADC_GPADC_ENABLE
+void hal_adc_error_callback(adc_handle_t* p_adc)
+{
+    app_adc_evt_t evt;
+
+    evt.type = APP_ADC_EVT_ERROR;
+    evt.error_code = p_adc->error_code;
+
+    if (p_adc_env->evt_handler != NULL)
+    {
+        p_adc_env->evt_handler(&evt);
+    }
+}
+#endif
+
+#ifdef APP_ADC_SNSADC_ENABLE
+//lint -e714 The adc_get_trim_func is used in other files and declared in weak form, and it is overridden in app_adc.c.
 uint16_t adc_get_trim_func(adc_trim_info_t *p_adc_trim)
 {
     return sys_adc_trim_get(p_adc_trim);
 }
+#endif
 
 #endif

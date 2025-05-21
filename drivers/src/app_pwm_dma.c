@@ -57,10 +57,9 @@
  * LOCAL FUNCTION DECLARATION
  *****************************************************************************************
  */
-extern bool pwm_prepare_for_sleep(void);
-extern void pwm_sleep_canceled(void);
-extern void pwm_wake_up_ind(void);
+#ifdef APP_DRIVER_WAKEUP_CALL_FUN
 extern void pwm_wake_up(app_pwm_id_t id);
+#endif
 
 /*
  * LOCAL VARIABLE DEFINITIONS

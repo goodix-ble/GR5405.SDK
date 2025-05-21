@@ -64,11 +64,11 @@
 #define BLE_SEC_AUTH_MITM              (1 << 2)           /**< MITM flag. */
 #define BLE_SEC_AUTH_SEC_CON           (1 << 3)           /**< Security connection flag. */
 #define BLE_SEC_AUTH_KEY_PRESS_NOTIFY  (1 << 4)           /**< Key press notify flag. */
-#define BLE_SEC_AUTH_ALL               (AUTH_BOND | AUTH_MITM | AUTH_SEC_CON | AUTH_KEY_PRESS_NOTIFY)  /**< All authentication flags are on. */
+#define BLE_SEC_AUTH_ALL               (BLE_SEC_AUTH_BOND | BLE_SEC_AUTH_MITM | BLE_SEC_AUTH_SEC_CON | BLE_SEC_AUTH_KEY_PRESS_NOTIFY)  /**< All authentication flags are on. */
 /**@} */
 
 /**@defgroup BLE_SEC_KEY_DIST_FLAG  SEC Key Distribution Flag
-* @{ 
+* @{
 */
 #define BLE_SEC_KDIST_NONE      0            /**< No key needs to be distributed. */
 #define BLE_SEC_KDIST_ENCKEY   (1 << 0)      /**< Distribute encryption and master identification info. */
@@ -243,6 +243,9 @@ typedef struct
     } params;                                                 /**< The parameters of sec events. */
 } ble_sec_evt_t;                                              /**< Event Parameters. */
 
+/**@brief OOB info for CCC SC OOB pair. */
+typedef void (*oob_info_cb_t)(uint8_t *pub_key_x, uint8_t *pub_key_y, uint8_t *rand, uint8_t *confirm);
+
 /** @} */
 
 /** @addtogroup BLE_SEC_FUNCTIONS Functions
@@ -251,7 +254,7 @@ typedef struct
  ****************************************************************************************
  * @brief Set security parameter.
  *
-* @param[in] p_sec_param: Pointer to the security parameter structure, @ref ble_sec_param_t.
+ * @param[in] p_sec_param: Pointer to the security parameter structure, @ref ble_sec_param_t.
  *
  * @retval ::SDK_SUCCESS: The security parameter is successfully set to the BLE stack.
  * @retval ::SDK_ERR_POINTER_NULL: Invalid pointer supplied.
@@ -262,9 +265,23 @@ uint16_t ble_sec_params_set(ble_sec_param_t *p_sec_param);
 
 /**
  ****************************************************************************************
+ * @brief Set security parameter for specific role.
+ *
+ * @param[in] p_sec_param: Pointer to the security parameter structure, @ref ble_sec_param_t.
+ * @param[in] role: 0: master role, 1: slave role, @ref ble_gap_ll_role_type_t.
+ *
+ * @retval ::SDK_SUCCESS: The security parameter is successfully set to the BLE stack.
+ * @retval ::SDK_ERR_POINTER_NULL: Invalid pointer supplied.
+ * @retval ::SDK_ERR_INVALID_PARAM: Invalid parameter supplied.
+ ****************************************************************************************
+ */
+uint16_t ble_sec_params_set_with_role(ble_sec_param_t *p_sec_param, uint8_t role);
+
+/**
+ ****************************************************************************************
  * @brief Start security encryption, this interface is used by both slave and master
  *
- * @note If the local device role is master, it will check that if the peer device is bonded firstly. If the peer device is bonded, 
+ * @note If the local device role is master, it will check that if the peer device is bonded firstly. If the peer device is bonded,
  *  the stack will encrypt the link directly, otherwise the stack will send a pair request to the peer device.
  *
  * @note If the local device role is slave, the stack will send a security request to the peer device.
@@ -294,7 +311,7 @@ uint16_t ble_sec_enc_cfm(uint8_t conn_idx, const ble_sec_cfm_enc_t *p_cfm_enc);
 
 /**
  ****************************************************************************************
- * @brief Get the pair info.
+ * @brief Get the pair info by peer identity address.
  *
  * @param[in] p_iden_addr: Pointer to the identity address.
  * @param[in] iden_addr_type: Identity address type.
@@ -306,6 +323,24 @@ uint16_t ble_sec_enc_cfm(uint8_t conn_idx, const ble_sec_cfm_enc_t *p_cfm_enc);
  ****************************************************************************************
  */
 uint16_t ble_sec_get_pair_info(uint8_t *p_iden_addr, uint8_t iden_addr_type, uint8_t *p_irk, uint8_t *p_ltk);
+
+/**
+ ****************************************************************************************
+ * @brief Get the pair info by connection index.
+ *
+ * @param[in] conn_idx: Connection index.
+ * @param[out] p_iden_addr: Pointer to the identity address.
+ * @param[out] p_iden_addr_type: Pointer to the identity address type.
+ * @param[out] p_irk: Pointer to the irk.
+ * @param[out] p_ltk: Pointer to the ltk.
+ *
+ * @retval ::SDK_SUCCESS: Success to find the pair info.
+ * @retval ::SDK_ERR_POINTER_NULL: Invalid pointer supplied.
+ * @retval ::SDK_ERR_INVALID_CONN_IDX: Invalid connection index supplied.
+ * @retval ::SDK_ERR_LIST_ITEM_NOT_FOUND: Item not found in the bond list.
+ ****************************************************************************************
+ */
+uint16_t ble_sec_get_pair_info_by_conn_idx(uint8_t conn_idx, uint8_t *p_iden_addr, uint8_t *p_iden_addr_type, uint8_t *p_irk, uint8_t *p_ltk);
 
 /**
  ****************************************************************************************
@@ -330,6 +365,16 @@ bool ble_sec_check_bonded(uint8_t conn_idx);
  ****************************************************************************************
  */
 bool ble_sec_check_bonded_by_addr(ble_gap_bdaddr_t *p_peer_iden_addr);
+
+/**
+ ****************************************************************************************
+ * @brief Init oob info for ccc sc pair.
+ *
+ * @param[in] p_cb:  Pointer to the callback for oob info.
+ *
+ ****************************************************************************************
+ */
+void ble_sec_ccc_sc_oob_pair_init(oob_info_cb_t p_cb);
 
 /** @} */
 

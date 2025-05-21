@@ -55,6 +55,7 @@
  */
 
 #ifdef SYSTEM_SLOW_CLOCK_ENABLE
+//lint -e9004 -e762 The multiple declarations of SystemSlowClock have no side effects.
 extern uint32_t SystemSlowClock;
 #endif
 
@@ -124,6 +125,12 @@ uint16_t app_aon_wdt_init(app_aon_wdt_params_t *p_params, app_aon_wdt_evt_handle
     p_aon_wdt_env->handle.SystemCoreLowClock = &SystemSlowClock;
 #endif
 
+    err_code = hal_aon_wdt_init(&p_aon_wdt_env->handle);
+    HAL_ERR_CODE_CHECK(err_code);
+
+    p_aon_wdt_env->evt_handler = evt_handler;
+    p_aon_wdt_env->aon_wdt_state = APP_AON_WDT_ACTIVITY;
+    //lint -e9074 The conversion is necessary.
 #ifdef APP_AON_WDT_MULTI_INSTANCE
     soc_register_nvic(WDT0_IRQn, (uint32_t)AON_WDT_IRQHandler);
     NVIC_ClearPendingIRQ(WDT0_IRQn);

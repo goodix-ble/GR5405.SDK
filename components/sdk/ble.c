@@ -41,6 +41,7 @@ extern void reg_llm_hci_cmd_patch_tab(llm_hci_cmd_tab_item_t *hci_cmd_tab, uint1
 
 extern void ble_stack_enable(ble_evt_handler_t evt_handler, stack_heaps_table_t *p_heaps_table);
 extern void ble_stack_controller_enable(stack_heaps_table_t *p_heaps_table);
+extern void ble_stack_max_connection_number_init(uint8_t cfg_max_connections);
 
 void ble_sdk_patch_env_init(void)
 {
@@ -475,6 +476,7 @@ static const struct ke_msg_handler sdk_msg_handler_tab[] =
     {GAPC_ENCRYPT_IND,                          (ke_msg_func_t)sec_rcv_encrypt_ind_handler },
     {GAPC_SECURITY_IND,                         (ke_msg_func_t)sec_rcv_sec_req_ind_handler },
     {GAPC_SIGN_COUNTER_IND,                     (ke_msg_func_t)sec_rcv_sign_counter_update_ind_handler },
+    {GAPC_SEC_REQ_TIMEOUT_IND,                  (ke_msg_func_t)sec_rcv_sec_req_timeout_ind_handler },
     #endif
 
     /******************************* sdk l2cap module ***************************************/
@@ -621,6 +623,7 @@ static void ble_feature_init(void)
 
     #if (CFG_MAX_CONNECTIONS)
     ble_con_env_init();
+    ble_stack_max_connection_number_init(CFG_MAX_CONNECTIONS);
     #endif
 
     #if (DTM_TEST_V1_CMD_ENABLE || DTM_TEST_V2_CMD_ENABLE || DTM_TEST_V3_CMD_ENABLE || DTM_TEST_V4_CMD_ENABLE)

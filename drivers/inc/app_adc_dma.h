@@ -64,6 +64,7 @@ extern "C" {
 
 #ifdef HAL_ADC_MODULE_ENABLED
 
+#ifdef APP_ADC_SNSADC_ENABLE
 /** @addtogroup APP_ADC_DRIVER_MACRO Defines
   * @{
   */
@@ -76,6 +77,7 @@ extern "C" {
 */
 #define app_adc_dma_multi_channel_conversion_async  app_adc_multi_channel_conversion_async
 /** @} */
+#endif
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup APP_ADC_DRIVER_FUNCTIONS Functions
@@ -105,6 +107,35 @@ uint16_t app_adc_dma_init(app_adc_params_t *p_params);
  ****************************************************************************************
  */
 uint16_t app_adc_dma_deinit(void);
+
+#ifdef APP_ADC_GPADC_ENABLE
+
+/**
+ ****************************************************************************************
+ * @brief  DMA for conversion.
+ *
+ * @param[in]  p_data: Pointer to data buffer which to storage ADC conversion results.
+ * @param[in]  length: Length of data buffer, range between 0 and 4095.
+ * Note: Length must be aligned on a four-byte boundary.
+ *
+ * @return Result of operation.
+ ****************************************************************************************
+ */
+uint16_t app_adc_dma_conversion_async(uint16_t *p_data, uint32_t length);
+
+/**
+ ****************************************************************************************
+ * @brief  DMA for multi channels conversion; evt_handler in app_adc_init will callback when all channels finish.
+ *
+ * @param[in]  p_begin_node: Pointer to the multi sample channels list node.
+ * @param[in]  total_nodes: total sample channels.
+ *
+ * @return Result of operation.
+ ****************************************************************************************
+ */
+uint16_t app_adc_dma_multi_channel_conversion_async(app_adc_sample_node_t *p_begin_node, uint32_t total_nodes);
+
+#endif
 
 /** @} */
 

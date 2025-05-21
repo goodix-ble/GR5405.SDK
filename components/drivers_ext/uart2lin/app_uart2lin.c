@@ -10,14 +10,12 @@
  * DEFINES
  *****************************************************************************************
  */
-#define GWCP_DUAL_TIMER_TIMER_MS(X)         (SystemCoreClock / 1000 *(X) - 1)
+#define GWCP_DUAL_TIMER_TIMER_MS(X) (SystemCoreClock / 1000 *(X) - 1)
 
-#define BLE_IRQ_PRIORITY           (NVIC_GetPriority(BLE_IRQn) + (1 << (NVIC_GetPriorityGrouping() + 1)))
+#define LIN_MASTER_REQUEST_FRAME    (0x3C)
+#define LIN_SLAVE_RESPONSE_FRAME    (0x3D)
 
-#define LIN_MASTER_REQUEST_FRAME   (0x3C)
-#define LIN_SLAVE_RESPONSE_FRAME   (0x3D)
-
-#define UART_RINGBUFFER_LEN        (128)
+#define UART_RINGBUFFER_LEN         (128)
 
 /*
  * LOCAL VARIABLE DEFINITIONS
@@ -40,6 +38,7 @@ static app_uart_params_t s_uart_params = {
 static app_uart2lin_env_t s_uart2lin_env =
 {
     .is_timeout = false,
+    .is_timer_active = false,
     .init_state = APP_UART2LIN_INIT_NO_READY,
     .tx_type = APP_UART2LIN_TX_IDLE,
     .rx_type = APP_UART2LIN_RX_IDLE,
@@ -53,6 +52,9 @@ static uint8_t s_receive_buffer[APP_UART2LIN_FRAME_LEN] = {0};
 // UART2LIN RX ring_buffer
 static uint8_t s_ring_buffer[UART_RINGBUFFER_LEN] = {0};
 static ring_buffer_t s_ring_buffer_handle;
+
+// UART2LIN RX interrupt lock
+static volatile bool s_uart_rx_lock = false;
 
 // UART2LIN software timer instance
 static app_timer_id_t s_uart2lin_timer_id = {0};
@@ -75,19 +77,11 @@ static void uart2lin_software_timer_cb(void* p_arg)
 {
     GLOBAL_EXCEPTION_DISABLE();
 
+    s_uart2lin_env.is_timer_active = false;
     s_uart2lin_env.is_timeout = true;
     s_uart2lin_env.rx_type = APP_UART2LIN_RX_HEAD;
     s_uart2lin_env.tx_type = APP_UART2LIN_TX_IDLE;
     s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_TIMEOUT;
-
-    if (APP_UART_ID_0 == s_uart_params.id)
-    {
-        NVIC_ClearPendingIRQ(UART0_IRQn);
-    }
-    else
-    {
-        NVIC_ClearPendingIRQ(UART1_IRQn);
-    }
 
     if (HAL_UART_STATE_READY != s_uart_params.uart_dev.handle.rx_state)
     {
@@ -104,19 +98,11 @@ static void uart2lin_hardware_timer_cb(app_dual_tim_evt_t *p_evt)
 {
     LOCAL_INT_DISABLE(BLE_IRQn);
 
+    s_uart2lin_env.is_timer_active = false;
     s_uart2lin_env.is_timeout = true;
     s_uart2lin_env.rx_type = APP_UART2LIN_RX_HEAD;
     s_uart2lin_env.tx_type = APP_UART2LIN_TX_IDLE;
     s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_TIMEOUT;
-
-    if (APP_UART_ID_0 == s_uart_params.id)
-    {
-        NVIC_ClearPendingIRQ(UART0_IRQn);
-    }
-    else
-    {
-        NVIC_ClearPendingIRQ(UART1_IRQn);
-    }
 
     if (HAL_UART_STATE_READY != s_uart_params.uart_dev.handle.rx_state)
     {
@@ -135,7 +121,8 @@ static void uart2lin_timer_config(void)
     {
         if (SDK_SUCCESS != app_timer_create(&s_uart2lin_timer_id, ATIMER_ONE_SHOT, uart2lin_software_timer_cb))
         {
-            APP_ASSERT_CHECK(0);
+            //lint -e506 -e774 The passed constant value is intended to trigger an ASSERT directly.
+            APP_ASSERT_CHECK(false);
         }
     }
     else
@@ -143,32 +130,37 @@ static void uart2lin_timer_config(void)
         s_dual_tim.init.auto_reload = GWCP_DUAL_TIMER_TIMER_MS(s_uart2lin_env.rx_response_timeout);
         if (APP_DRV_SUCCESS != app_dual_tim_init(&s_dual_tim, uart2lin_hardware_timer_cb))
         {
-            APP_ASSERT_CHECK(0);
+            APP_ASSERT_CHECK(false);
         }
     }
 }
 
 static void uart2lin_timer_start(void)
 {
+    s_uart2lin_env.is_timer_active = true;
     if (APP_UART2LIN_SOFTWARE_TIMER == s_uart2lin_env.timer_type)
     {
+        app_timer_stop(s_uart2lin_timer_id);
+        //lint -e9080 The third argument of app_timer_start is a void pointer, and this parameter is not needed here.
         if (SDK_SUCCESS != app_timer_start(s_uart2lin_timer_id, s_uart2lin_env.rx_response_timeout, NULL))
         {
-            APP_ASSERT_CHECK(0);
+            s_uart2lin_env.is_timer_active = false;
         }
     }
     else
     {
+        (void) app_dual_tim_stop(APP_DUAL_TIM_ID_1);
         app_dual_tim_set_params(&s_dual_tim, APP_DUAL_TIM_ID_1);
         if (SDK_SUCCESS != app_dual_tim_start(APP_DUAL_TIM_ID_1))
         {
-            APP_ASSERT_CHECK(0);
+            s_uart2lin_env.is_timer_active = false;
         }
     }
 }
 
 static void uart2lin_timer_stop(void)
 {
+    s_uart2lin_env.is_timer_active = false;
     if (APP_UART2LIN_SOFTWARE_TIMER == s_uart2lin_env.timer_type)
     {
         app_timer_stop(s_uart2lin_timer_id);
@@ -176,6 +168,7 @@ static void uart2lin_timer_stop(void)
     else
     {
         (void) app_dual_tim_stop(APP_DUAL_TIM_ID_1);
+        ll_dual_timer_clear_flag_it(s_dual_tim.dual_tim_env.handle.p_instance);
     }
 }
 
@@ -281,6 +274,9 @@ static void hw_uart_transmit(app_uart2lin_tx_type_t tx_type)
     }
     ll_uart_set_tx_fifo_threshold(s_uart_params.uart_dev.handle.p_instance, LL_UART_TX_FIFO_TH_EMPTY);
 
+    uart2lin_timer_stop();
+    uart2lin_timer_start();
+
     GLOBAL_EXCEPTION_ENABLE();
 }
 
@@ -288,6 +284,25 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
 {
     if (APP_UART_EVT_RX_DATA == p_evt->type)
     {
+        bool cur_lock_state = true;
+        uint8_t rx_packet[APP_UART2LIN_FRAME_LEN] = {0};
+        uint8_t std_checksum = 0;
+        uint8_t data_len = 0;
+
+        GLOBAL_EXCEPTION_DISABLE();
+        cur_lock_state = s_uart_rx_lock;
+        if (!s_uart_rx_lock)
+        {
+            s_uart_rx_lock = true;
+        }
+        GLOBAL_EXCEPTION_ENABLE();
+
+        if (cur_lock_state)
+        {
+            // If interrupt nesting occurs, discard the received data. Ensure that the system can recover.
+            return;
+        }
+
         if (APP_UART2LIN_TX_RESPONSE == s_uart2lin_env.tx_type)
         {
             // Filter out loopback data from the transceiver.
@@ -308,11 +323,10 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
             {
                 app_uart2lin_tx_response_cb(&s_uart2lin_env);
             }
-            return;
+            goto EXIT;
         }
 
         ring_buffer_write(&s_ring_buffer_handle, s_receive_buffer, p_evt->data.size);
-        uint8_t rx_packet[APP_UART2LIN_FRAME_LEN] = {0};
 
         while (ring_buffer_items_count_get(&s_ring_buffer_handle) && (APP_UART2LIN_RX_HEAD == s_uart2lin_env.rx_type))
         {
@@ -323,7 +337,7 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
                 s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_INCOMPLETE_DATA;
                 app_uart2lin_error_cb(&s_uart2lin_env);
                 s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
-                return;
+                goto EXIT;
             }
 
             for (uint8_t idx = 0; idx < APP_UART2LIN_HEAD_LEN; idx++)
@@ -370,14 +384,19 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
                             s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
                         }
                     }
-                    return;
+                    break;
                 case (APP_UART2LIN_SYNC_FIELD_INDEX + 1):
                     {
                         // Contain: 0x0 (break) + 0x55 (sync).
                         ring_buffer_read(&s_ring_buffer_handle, rx_packet, APP_UART2LIN_HEAD_LEN - 2);
-                        (void)app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN - 2);
+                        if (APP_DRV_SUCCESS != app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN - 2))
+                        {
+                            s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_RX_HEAD_STOP;
+                            app_uart2lin_error_cb(&s_uart2lin_env);
+                            s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
+                        }
                     }
-                    return;
+                    break;
                 default:
                     {
                         // No sync data
@@ -386,20 +405,30 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
                         if (APP_UART2LIN_BREAK_FRAME == rx_packet[APP_UART2LIN_PID_INDEX])
                         {
                             ring_buffer_write(&s_ring_buffer_handle, rx_packet + APP_UART2LIN_PID_INDEX, 1);
-                            (void)app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN - 1);
+                            if (APP_DRV_SUCCESS != app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN - 1))
+                            {
+                                s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_RX_HEAD_STOP;
+                                app_uart2lin_error_cb(&s_uart2lin_env);
+                                s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
+                            }
                         }
                         else
                         {
-                            (void)app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN);
+                            if (APP_DRV_SUCCESS != app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN))
+                            {
+                                s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_RX_HEAD_STOP;
+                                app_uart2lin_error_cb(&s_uart2lin_env);
+                                s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
+                            }
                         }
                     }
-                    return;
+                    break;
             }
+            goto EXIT;
         }
 
         // Received LIN response.
-        uint8_t std_checksum = 0;
-        uint8_t data_len = ring_buffer_items_count_get(&s_ring_buffer_handle);
+        data_len = ring_buffer_items_count_get(&s_ring_buffer_handle);
         APP_ASSERT_CHECK(data_len > 1);
 
         if (data_len > APP_UART2LIN_DATA_LEN + APP_UART2LIN_CHECKSUM_LEN)
@@ -426,6 +455,10 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
             app_uart2lin_error_cb(&s_uart2lin_env);
             s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
         }
+
+EXIT:
+        s_uart_rx_lock = false;
+        return;
     }
 
     if (APP_UART_EVT_ERROR == p_evt->type)
@@ -437,6 +470,12 @@ static void app_uart_callback(app_uart_evt_t *p_evt)
         if (HAL_UART_ERROR_FE == (s_uart_params.uart_dev.handle.error_code & HAL_UART_ERROR_FE))
         {
             s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_FRAME;
+        }
+        if (!s_uart2lin_env.is_timer_active)
+        {
+            s_uart2lin_env.error_code |= APP_UART2LIN_ERROR_RX_HEAD_STOP;
+            app_uart2lin_error_cb(&s_uart2lin_env);
+            s_uart2lin_env.error_code = APP_UART2LIN_ERROR_NONE;
         }
     }
 }
@@ -472,13 +511,19 @@ bool app_uart2lin_init(app_uart2lin_init_t *p_uart2lin_init)
         return false;
     }
 
+    // Interrupt Preemption Priority: BLE > DMA > UART = DUAL_TIMER
     if (APP_UART_ID_0 == s_uart_params.id)
     {
-        NVIC_SetPriority(UART0_IRQn, BLE_IRQ_PRIORITY + 1);
+        NVIC_SetPriority(UART0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 4, 0));
     }
     else
     {
-        NVIC_SetPriority(UART1_IRQn, BLE_IRQ_PRIORITY + 1);
+        NVIC_SetPriority(UART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 4, 0));
+    }
+    NVIC_SetPriority(DMA0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+    if (APP_UART2LIN_HARDWARE_TIMER == p_uart2lin_init->timer_type)
+    {
+        NVIC_SetPriority(DUAL_TIMER_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 4, 1));
     }
 
     s_uart2lin_env.lin_mode = p_uart2lin_init->lin_mode;
@@ -564,6 +609,7 @@ void app_uart2lin_force_rx_head(void)
     // This extra bit will be automatically filtered during RX interrupt processing.
     if (APP_UART2LIN_INIT_READY == s_uart2lin_env.init_state)
     {
+        LOCAL_INT_DISABLE(BLE_IRQn);
         uart2lin_timer_stop();
         ring_buffer_clean(&s_ring_buffer_handle);
         s_uart2lin_env.tx_type = APP_UART2LIN_TX_IDLE;
@@ -571,8 +617,9 @@ void app_uart2lin_force_rx_head(void)
         (void)app_uart_abort(s_uart_params.id);
         if (APP_DRV_SUCCESS != app_uart_dma_receive_async(s_uart_params.id, s_receive_buffer, APP_UART2LIN_HEAD_LEN))
         {
-            APP_ASSERT_CHECK(0);
+            APP_ASSERT_CHECK(false);
         }
+        LOCAL_INT_RESTORE();
     }
 }
 
@@ -598,6 +645,7 @@ bool app_uart2lin_tx_head(uint8_t pid)
     }
     else
     {
+        //lint -e778 The calculation here is valid.
         s_uart2lin_env.tx_buffer[APP_UART2LIN_SYNC_FIELD_INDEX - 1] = APP_UART2LIN_SYNC_FRAME;
         s_uart2lin_env.tx_buffer[APP_UART2LIN_PID_INDEX - 1] = lin_get_pid_parity(pid);
         s_uart2lin_env.tx_len = APP_UART2LIN_HEAD_LEN - 1;
@@ -608,6 +656,7 @@ bool app_uart2lin_tx_head(uint8_t pid)
 
 bool app_uart2lin_tx_response(uint8_t *p_data, uint8_t size)
 {
+    //lint -e775 The size may be 0.
     if (APP_UART2LIN_TX_IDLE != s_uart2lin_env.tx_type
         || (s_uart2lin_env.is_timeout)
         || (NULL == p_data)
@@ -639,6 +688,43 @@ void app_uart2lin_abort_rx(void)
 void app_uart2lin_abort_tx(void)
 {
     s_uart2lin_env.tx_type = APP_UART2LIN_TX_IDLE;
+}
+
+void app_uart2lin_wakeup(uint32_t low_level_duration)
+{
+    LOCAL_INT_DISABLE(BLE_IRQn);
+    if (APP_IO_TYPE_AON == s_uart_params.pin_cfg.tx.type)
+    {
+        ll_aon_gpio_set_pin_mux(s_uart_params.pin_cfg.tx.pin, IO_MUX_GPIO);
+        ll_aon_gpio_set_pin_mode(s_uart_params.pin_cfg.tx.pin, LL_AON_GPIO_MODE_OUTPUT);
+        ll_aon_gpio_reset_output_pin(s_uart_params.pin_cfg.tx.pin);
+        delay_us(low_level_duration);
+        ll_aon_gpio_set_pin_mux(s_uart_params.pin_cfg.tx.pin, s_uart_params.pin_cfg.tx.mux);
+        ll_aon_gpio_set_pin_mode(s_uart_params.pin_cfg.tx.pin, LL_AON_GPIO_MODE_INOUT);
+    }
+    else if (APP_IO_TYPE_GPIOA == s_uart_params.pin_cfg.tx.type)
+    {
+        ll_gpio_set_pin_mux(GPIO0, s_uart_params.pin_cfg.tx.pin, IO_MUX_GPIO);
+        ll_gpio_set_pin_mode(GPIO0, s_uart_params.pin_cfg.tx.pin, LL_GPIO_MODE_OUTPUT);
+        ll_gpio_reset_output_pin(GPIO0, s_uart_params.pin_cfg.tx.pin);
+        delay_us(low_level_duration);
+        ll_gpio_set_pin_mux(GPIO0, s_uart_params.pin_cfg.tx.pin, s_uart_params.pin_cfg.tx.mux);
+        ll_gpio_set_pin_mode(GPIO0, s_uart_params.pin_cfg.tx.pin, LL_GPIO_MODE_INOUT);
+    }
+    else if (APP_IO_TYPE_MSIO == s_uart_params.pin_cfg.tx.type)
+    {
+        ll_msio_set_pin_mux(MSIOA, s_uart_params.pin_cfg.tx.pin, IO_MUX_GPIO);
+        ll_msio_set_pin_direction(MSIOA, s_uart_params.pin_cfg.tx.pin, LL_MSIO_DIRECTION_OUTPUT);
+        ll_msio_reset_output_pin(MSIOA, s_uart_params.pin_cfg.tx.pin);
+        delay_us(low_level_duration);
+        ll_msio_set_pin_mux(MSIOA, s_uart_params.pin_cfg.tx.pin, s_uart_params.pin_cfg.tx.mux);
+        ll_msio_set_pin_direction(MSIOA, s_uart_params.pin_cfg.tx.pin, LL_MSIO_DIRECTION_INOUT);
+    }
+    else
+    {
+        APP_ASSERT_CHECK(false);
+    }
+    LOCAL_INT_RESTORE();
 }
 
 __WEAK void app_uart2lin_rx_head_cb(app_uart2lin_env_t *p_uart2lin)

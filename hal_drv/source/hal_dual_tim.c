@@ -150,11 +150,6 @@ __WEAK hal_status_t hal_dual_timer_base_deinit(dual_timer_handle_t *p_dual_timer
     /* DeInit the low level hardware: GPIO, CLOCK... */
     hal_dual_timer_base_msp_deinit(p_dual_timer);
 
-#ifdef HAL_CLOCK_UNIFORM_CONTROL
-    //lint -e923 Cast from pointer to unsigned int is necessary and safe
-    hal_clock_disable_module((uint32_t)p_dual_timer->p_instance);
-#endif
-
     /* Initialize the DUAL_TIM state */
     p_dual_timer->state = HAL_DUAL_TIMER_STATE_RESET;
 

@@ -189,7 +189,7 @@ static bool spi_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void spi_wake_up_ind(void)
+static SECTION_RAM_CODE void spi_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     uint32_t i;
@@ -1189,7 +1189,9 @@ uint16_t app_spi_abort(app_spi_id_t id)
 
     err_code = hal_spi_abort_it(&p_spi_env[id]->handle);
     if (err_code != HAL_OK)
+    {
         return err_code;
+    }
 
     return APP_DRV_SUCCESS;
 }

@@ -18,10 +18,13 @@
 #define FLASH_HP_CMD                    PUYA_FLASH_HP_CMD
 #define FLASH_HP_END_DUMMY              PUYA_FLASH_HP_END_DUMMY
 
+// COMMIT_ID is used to record the git commit ID at the time of the SDK release.
+// The first 4 bytes of COMMIT_ID correspond to the first 4 bytes of the CHIP repository.
+// The last 4 bytes of COMMIT_ID correspond to the first 4 bytes of the COM repository.
 #define SDK_VER_MAJOR                   1
 #define SDK_VER_MINOR                   1
-#define SDK_VER_BUILD                   7
-#define COMMIT_ID                       0x386f405e
+#define SDK_VER_BUILD                   8
+#define COMMIT_ID                       0x28f07e2b
 
 static const sdk_version_t sdk_version = {SDK_VER_MAJOR,
                                           SDK_VER_MINOR,
@@ -122,11 +125,6 @@ void ble_nvds_set_entry(struct rwip_nvds_api *p_api)
 {
 
 }
-
-uint8_t nvds_put(NvdsTag_t tag, uint16_t len, const uint8_t *p_buf)
-{
-    return 0;
-}
 #endif
 
 #if (CFG_APP_DRIVER_SUPPORT == 1)
@@ -168,16 +166,24 @@ void power_mgmt_init(void)
 
 uint8_t sys_device_reset_reason(void)
 {
-   uint8_t reset_season = AON_CTL->DBG_REG_RST_SRC & 0x3FUL;
-   AON_CTL->DBG_REG_RST_SRC = AON_CTL->DBG_REG_RST_SRC | reset_season;
-   if(SYS_RESET_REASON_AONWDT & reset_season)
-   {
-       return SYS_RESET_REASON_AONWDT;
-   }
-   else
-   {
-       return SYS_RESET_REASON_NONE;
-   }
+    uint8_t reset_season = AON_CTL->DBG_REG_RST_SRC & 0x3FUL;
+    AON_CTL->DBG_REG_RST_SRC = AON_CTL->DBG_REG_RST_SRC | reset_season;
+    if (SYS_RESET_REASON_AONWDT & reset_season)
+    {
+        return SYS_RESET_REASON_AONWDT;
+    }
+    else if (SYS_RESET_REASON_FULL & reset_season)
+    {
+        return SYS_RESET_REASON_FULL;
+    }
+    else if (SYS_RESET_REASON_POR & reset_season)
+    {
+        return SYS_RESET_REASON_POR;
+    }
+    else
+    {
+        return SYS_RESET_REASON_NONE;
+    }
 }
 
 void first_class_task(void)
@@ -208,6 +214,8 @@ void first_class_task(void)
     mem_pwr_mgmt_mode_set(MEM_POWER_AUTO_MODE);
 #endif
 
+    /* Avoid voltage injection. */
+    ll_msio_set_pin_mode(MSIOA, LL_MSIO_PIN_7, LL_MSIO_MODE_DIGITAL);
 #endif
 
 #if (BLE_SUPPORT == 1)
@@ -259,16 +267,14 @@ void second_class_task(void)
 
 void otp_trim_init(void)
 {
-#if (BLE_SUPPORT == 1)
-    if(SDK_SUCCESS != sys_trim_info_sync())
+    if (SDK_SUCCESS != sys_trim_info_sync())
     {
-        if(!CHECK_IS_ON_FPGA())
+        if (!CHECK_IS_ON_FPGA())
         {
             /* do nothing for not calibrated chips */
             while(1);
         }
     }
-#endif
 }
 
 static void patch_init(void)

@@ -56,13 +56,6 @@
 #define CHIP_TYPE                        0
 #endif
 
-// <o> SK_board select
-// <0=> GR533x_SK
-// <1=> GR5405_SK
-#ifndef SK_BOARD_TYPE
-#define SK_BOARD_TYPE                    1
-#endif
-
 // <h> APP driver configuration
 // <o> APP driver support
 // <0=> Not using peripherals app driver
@@ -77,7 +70,6 @@
 #ifndef ENABLE_BACKTRACE_FEA
 #define ENABLE_BACKTRACE_FEA             0
 #endif
-
 
 // <o> Enable APP log module
 // <0=> DISABLE
@@ -281,7 +273,8 @@
 // </h>
 
 // <h> BLE resource configuration
-// <i> Note: The total number of BLE Activities(CONNECTIONS+ADVS+SCAN) should not exceed the limit 12.
+// <i> Note: The total number of BLE Activities(CONNECTIONS+2*ADVS+SCAN) should not exceed the limit 12.
+// <i> Note: Stack support max number of activity is 12.
 
 // <o> Support maximum number of BLE profiles <1-64>
 // <i> Range: 1-64
@@ -290,19 +283,20 @@
 #endif
 
 // <o> Support maximum number of bonded devices
+// <i> Note: minimum number is 1
 #ifndef CFG_MAX_BOND_DEVS
 #define CFG_MAX_BOND_DEVS                4
 #endif
 
-// <o> Support maximum number of BLE Links <1-10>
-// <i> Range: 1-10
+// <o> Support maximum number of BLE Links <1-8>
+// <i> Range: 1-8
 #ifndef CFG_MAX_CONNECTIONS
 #define CFG_MAX_CONNECTIONS              5
 #endif
 
-// <o> Support maximum number of BLE Legacy/Extended Advertisings <0-5>
-// <i> Range: 0-5
-// <i> Note: The total number of BLE Legacy/Extended/Periodic Advertisings should not exceed the limit 5.
+// <o> Support maximum number of BLE Legacy/Extended Advertisings <0-4>
+// <i> Range: 0-4
+// <i> Note: The total number of BLE Legacy/Extended/Periodic Advertisings should not exceed the limit 4.
 #ifndef CFG_MAX_ADVS
 #define CFG_MAX_ADVS                     1
 #endif

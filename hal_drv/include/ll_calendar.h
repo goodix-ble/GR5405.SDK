@@ -556,7 +556,7 @@ __STATIC_INLINE void ll_calendar_it_enable_wrap(void)
 }
 
 /**
-  * @brief  Disable calendar warp interrupt.
+  * @brief  Disable calendar wrap interrupt.
   *
   *  Register|BitsName
   *  --------|--------

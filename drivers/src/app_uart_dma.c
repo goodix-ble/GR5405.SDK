@@ -53,15 +53,15 @@
  * STRUCT DEFINE
  *****************************************************************************************
  */
-struct dma_request {
+struct uart_dma_request {
     uint32_t tx;
     uint32_t rx;
 };
 
 typedef struct {
-    struct dma_request dma0_request;
+    struct uart_dma_request dma0_request;
 #if (DMA_INSTANCE_MAX > 1)
-    struct dma_request dma1_request;
+    struct uart_dma_request dma1_request;
 #endif
 } uart_dma_info_t;
 
@@ -151,7 +151,9 @@ extern void uart_wake_up(app_uart_id_t id);
 
 static uint16_t app_uart_config_dma_tx(app_uart_params_t *p_params)
 {
-    app_dma_params_t tx_dma_params = { 0 };
+    app_dma_params_t tx_dma_params = {
+        .p_instance = NULL,
+    };
 
     tx_dma_params.p_instance = p_params->dma_cfg.tx_dma_instance;
     tx_dma_params.channel_number = p_params->dma_cfg.tx_dma_channel;
@@ -207,7 +209,9 @@ static uint16_t app_uart_config_dma_tx(app_uart_params_t *p_params)
 
 static uint16_t app_uart_config_dma_rx(app_uart_params_t *p_params)
 {
-    app_dma_params_t rx_dma_params = { 0 };
+    app_dma_params_t rx_dma_params = {
+        .p_instance = NULL,
+    };
 
     rx_dma_params.p_instance               = p_params->dma_cfg.rx_dma_instance;
     rx_dma_params.channel_number           = p_params->dma_cfg.rx_dma_channel;

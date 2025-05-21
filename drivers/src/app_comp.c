@@ -61,7 +61,7 @@ static void comp_wake_up_ind(void);
  */
 comp_env_t *p_comp_env = NULL;
 
-const static app_sleep_callbacks_t comp_sleep_cb =
+static const app_sleep_callbacks_t comp_sleep_cb =
 {
     .app_prepare_for_sleep = comp_prepare_for_sleep,
     .app_wake_up_ind       = comp_wake_up_ind
@@ -87,7 +87,7 @@ static bool comp_prepare_for_sleep(void)
     return true;
 }
 
-SECTION_RAM_CODE static void comp_wake_up_ind(void)
+static SECTION_RAM_CODE void comp_wake_up_ind(void)
 {
 #ifndef APP_DRIVER_WAKEUP_CALL_FUN
     if (p_comp_env->comp_state == APP_COMP_ACTIVITY)
@@ -214,6 +214,7 @@ uint16_t app_comp_init(app_comp_params_t *p_params, app_comp_evt_handler_t evt_h
     p_comp_env->p_pin_cfg = &p_params->pin_cfg;
     p_comp_env->evt_handler = evt_handler;
     memcpy(&p_comp_env->handle.init, &p_params->init, sizeof(comp_init_t));
+    //lint -e641 This is to compare whether an error has occurred. When there is no error in both the HAL layer and the APP layer, the error_code is 0.
     hal_err_code = hal_comp_deinit(&p_comp_env->handle);
     APP_DRV_ERR_CODE_CHECK(hal_err_code);
 

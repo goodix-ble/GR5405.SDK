@@ -51,7 +51,7 @@ static void uart_pin_init(void)
 {
     app_io_init_t io_init = APP_IO_DEFAULT_CONFIG;
     io_init.pin  = SWD_CTRL_UART_RX_PIN;
-    io_init.pull = APP_IO_NOPULL;
+    io_init.pull = APP_IO_PULLUP;
     io_init.mode = APP_IO_MODE_MUX;
     io_init.mux  = SWD_CTRL_UART_RX_PINMUX;
     app_io_init(SWD_CTRL_UART_RX_IO_TYPE, &io_init);
@@ -111,7 +111,7 @@ void swd_unlock_process(void)
         SWD_CTRL_LOG("To RX pattern1");
         bool wait_pattern2 = false;
         char uart_rx_buf[PATTERN_LENGTH*2];
-        memset(uart_rx_buf, 0 ,sizeof(uart_rx_buf));
+        memset(uart_rx_buf, 0, sizeof(uart_rx_buf));
         app_uart_receive_sync(SWD_CTRL_UART_ID, (uint8_t *)uart_rx_buf, sizeof(uart_rx_buf), RX_PATTERN1_TIMEOUT);
         SWD_CTRL_LOG("RX data:");
         SWD_CTRL_LOG_HEX_DUMP(uart_rx_buf, sizeof(uart_rx_buf));
@@ -132,7 +132,7 @@ void swd_unlock_process(void)
         {
             swd_unlock_wdt_refresh();
             SWD_CTRL_LOG("To RX pattern2");
-            memset(uart_rx_buf, 0 ,sizeof(uart_rx_buf));
+            memset(uart_rx_buf, 0, sizeof(uart_rx_buf));
             app_uart_receive_sync(SWD_CTRL_UART_ID, (uint8_t *)uart_rx_buf, sizeof(uart_rx_buf), RX_PATTERN1_TIMEOUT);
             SWD_CTRL_LOG("RX data:");
             SWD_CTRL_LOG_HEX_DUMP(uart_rx_buf, sizeof(uart_rx_buf));
@@ -142,13 +142,14 @@ void swd_unlock_process(void)
                 {
                     // Get pattern2
                     SWD_CTRL_LOG("Get pattern2");
-                #if !APP_LOG_ENABLE || (APP_LOG_PORT != 0)
-                    // if APP_LOG_ENABLE and APP_LOG_PORT = 0, uart deinit by other modules
-                    app_uart_deinit(SWD_CTRL_UART_ID);
-                #endif
-                    return;
+                    wait_pattern2 = false;
+                    break;
                 }
             }
         }
     }
+#if !APP_LOG_ENABLE || (APP_LOG_PORT != 0)
+    // if APP_LOG_ENABLE and APP_LOG_PORT = 0, uart deinit by other modules
+    app_uart_deinit(SWD_CTRL_UART_ID);
+#endif
 }

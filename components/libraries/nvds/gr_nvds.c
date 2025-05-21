@@ -1863,6 +1863,7 @@ nvds_err_t nvds_get(NvdsTag_t tag, uint16_t *p_len, uint8_t *p_buf)
     return ret;
 }
 
+#ifndef DTM_ATE_ENABLE
 nvds_err_t nvds_put(NvdsTag_t tag, uint16_t len, const uint8_t *p_buf)
 {
     nvds_err_t ret;
@@ -1916,6 +1917,12 @@ nvds_err_t nvds_put(NvdsTag_t tag, uint16_t len, const uint8_t *p_buf)
         return ret;
     }
 }
+#else
+nvds_err_t nvds_put(NvdsTag_t tag, uint16_t len, const uint8_t *p_buf)
+{
+    return 0;
+}
+#endif
 
 nvds_err_t nvds_del(NvdsTag_t tag)
 {

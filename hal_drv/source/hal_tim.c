@@ -61,7 +61,7 @@ void ll_timer_deinit(timer_regs_t *TIMERx)
     LL_TIMER_WriteReg(TIMERx, CTRL, 0);
     LL_TIMER_WriteReg(TIMERx, RELOAD, 0);
     LL_TIMER_WriteReg(TIMERx, INTEN, 0);
-    LL_TIMER_WriteReg(TIMERx, INTSTAT, 0);
+    ll_timer_clear_all_flag_it(TIMERx);
 }
 
 /**
@@ -129,11 +129,6 @@ __WEAK hal_status_t hal_timer_deinit(timer_handle_t *p_timer)
 
     /* DeInit the low level hardware: GPIO, CLOCK... */
     hal_timer_msp_deinit(p_timer);
-
-#ifdef HAL_CLOCK_UNIFORM_CONTROL
-    //lint -e923 Cast from pointer to unsigned int is necessary and safe
-    hal_clock_disable_module((uint32_t)p_timer->p_instance);
-#endif
 
     /* Initialize the TIMER state */
     p_timer->state = HAL_TIMER_STATE_RESET;

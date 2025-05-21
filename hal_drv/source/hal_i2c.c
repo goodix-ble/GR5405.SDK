@@ -149,6 +149,12 @@ extern uint32_t GetSerialClock(void);
     ((((__HANDLE__)->state) == HAL_I2C_STATE_BUSY_TX) ? \
     I2C_GET_TX_DMA_REMAIN_DATA(__HANDLE__) : I2C_GET_RX_DMA_REMAIN_DATA(__HANDLE__))
 
+#ifdef  HAL_I2C_CLOCK_BASE_SER0
+#define I2C_CLOCK()    hal_clock_get_ser0_clk()
+#else
+#define I2C_CLOCK()    GetSerialClock()
+#endif
+
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 
@@ -412,8 +418,8 @@ __WEAK hal_status_t hal_i2c_init(i2c_handle_t *p_i2c)
     /* Configure I2Cx: Frequency range */
     ll_i2c_set_speed_mode(p_i2c->p_instance, __LL_I2C_CONVERT_SPEED_MODE(p_i2c->init.speed));
 
-    lcnt = (GetSerialClock() / 2U) / p_i2c->init.speed;
-    hcnt = ((GetSerialClock() / 2U) / p_i2c->init.speed) - (I2C_CALCULATION_CONSTANT + I2C_FS_SPKLEN);
+    lcnt = (I2C_CLOCK() / 2U) / p_i2c->init.speed;
+    hcnt = ((I2C_CLOCK() / 2U) / p_i2c->init.speed) - (I2C_CALCULATION_CONSTANT + I2C_FS_SPKLEN);
     ll_i2c_set_spike_len_fs(p_i2c->p_instance, I2C_FS_SPKLEN);
     if (p_i2c->init.speed < I2C_SPEED_400K)
     {
@@ -426,14 +432,14 @@ __WEAK hal_status_t hal_i2c_init(i2c_handle_t *p_i2c)
         ll_i2c_set_clock_low_period_fs(p_i2c->p_instance, lcnt);
     }
 
-    if((p_i2c->init.rx_hold_time / (1000000000U / GetSerialClock())) <= (hcnt - (I2C_FS_SPKLEN + I2C_CALCULATION_CONSTANT)))
+    if((p_i2c->init.rx_hold_time / (1000000000U / I2C_CLOCK())) <= (hcnt - (I2C_FS_SPKLEN + I2C_CALCULATION_CONSTANT)))
     {
-        ll_i2c_set_data_rx_hold_time(p_i2c->p_instance, (p_i2c->init.rx_hold_time / (1000000000U / GetSerialClock())));
+        ll_i2c_set_data_rx_hold_time(p_i2c->p_instance, (p_i2c->init.rx_hold_time / (1000000000U / I2C_CLOCK())));
     } else {
         ll_i2c_set_data_rx_hold_time(p_i2c->p_instance, (hcnt - (I2C_FS_SPKLEN + I2C_CALCULATION_CONSTANT)));
     }
 
-    ll_i2c_set_data_tx_hold_time(p_i2c->p_instance, (p_i2c->init.tx_hold_time / (1000000000U / GetSerialClock())));
+    ll_i2c_set_data_tx_hold_time(p_i2c->p_instance, (p_i2c->init.tx_hold_time / (1000000000U / I2C_CLOCK())));
 
     /* Configure I2Cx: Own Address, ack own address mode and Addressing Master mode */
     if (I2C_ADDRESSINGMODE_7BIT == p_i2c->init.addressing_mode)
@@ -456,14 +462,14 @@ __WEAK hal_status_t hal_i2c_init(i2c_handle_t *p_i2c)
     {
         ll_i2c_disable_general_call(p_i2c->p_instance);
     }
-    /* eanble bus clear feature */
+    /* enable bus clear feature */
     ll_i2c_enable_bus_clear_feature(p_i2c->p_instance);
 
-    /* set at low timerout 1ms for scl and sda*/
-    ll_i2c_set_scl_stuck_at_low_timeout(p_i2c->p_instance, GetSerialClock() / 10U);
-    ll_i2c_set_sda_stuck_at_low_timeout(p_i2c->p_instance, GetSerialClock() / 10U);
+    /* set at low timeout 1ms for scl and sda*/
+    ll_i2c_set_scl_stuck_at_low_timeout(p_i2c->p_instance, I2C_CLOCK() / 10U);
+    ll_i2c_set_sda_stuck_at_low_timeout(p_i2c->p_instance, I2C_CLOCK() / 10U);
 
-    /* eanble hold bus feature if rx fifo full */
+    /* enable hold bus feature if rx fifo full */
     ll_i2c_hold_bus_if_rx_full(p_i2c->p_instance);
     /* Clear all interrupt */
     ll_i2c_clear_flag_intr(p_i2c->p_instance);
@@ -2035,7 +2041,7 @@ __WEAK void hal_i2c_resume_reg(i2c_handle_t *p_i2c)
     WRITE_REG(p_i2c_regs->SDA_STUCK_TIMEOUT, p_i2c->retention[12]);
     SET_BITS(p_i2c_regs->EN, I2C_EN_ACTIVITY);
 #else
-    UNUSED(p_i2c);
+    SET_BITS(p_i2c->p_instance->EN, I2C_EN_ACTIVITY);
 #endif
 }
 
@@ -2089,7 +2095,10 @@ __STATIC_INLINE void i2c_master_transfer_config(i2c_handle_t *p_i2c, uint16_t de
     ll_i2c_enable_master_mode(p_i2c->p_instance);
     ll_i2c_set_slave_address(p_i2c->p_instance, dev_address);
     ll_i2c_enable(p_i2c->p_instance);
-
+#ifdef HAL_I2C_CLEAR_STOP_DET_PATCH
+    __NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();
+#endif
     /* CLear all interrupt */
     ll_i2c_clear_flag_intr(p_i2c->p_instance);
 }
@@ -2460,7 +2469,8 @@ static hal_status_t i2c_master_start_receive_dma(i2c_handle_t *p_i2c)
     hal_status_t status1 = HAL_OK;
     if (1U < p_i2c->xfer_size)
     {
-        // lint -e551 rxcmd is used
+        //lint -e550 rxcmd is used
+        //lint -esym(843, rxcmd) rxcmd cannot be declared as const
         // Note:The rxcmd must be declared in RAM because it is used as the starting address for DMA transfer.
         //      If it is located in flash memory and the xQSPI is in non-XIP mode, it may lead to abnormal DMA data transfer.
         static uint32_t rxcmd = LL_I2C_CMD_MST_READ;
@@ -3424,9 +3434,9 @@ __WEAK hal_status_t hal_i2c_speed_config(i2c_handle_t *p_i2c, uint32_t speed, ui
     {
         ll_i2c_disable(p_i2c->p_instance);
         ll_i2c_set_speed_mode(p_i2c->p_instance, __LL_I2C_CONVERT_SPEED_MODE(speed));
-        lcnt = ((GetSerialClock() / 1000U / 1000U ) * (((1000U * 1000U * 1000U) / (speed * 2U)) - scl_rise_time + scl_fall_time) / 1000U) - 1U;
+        lcnt = ((I2C_CLOCK() / 1000U / 1000U ) * (((1000U * 1000U * 1000U) / (speed * 2U)) - scl_rise_time + scl_fall_time) / 1000U) - 1U;
         spklen = ll_i2c_get_spike_len_fs(p_i2c->p_instance);
-        hcnt = ((GetSerialClock() / 1000U / 1000U) * (((1000U * 1000U * 1000U) / (speed * 2U)) - scl_fall_time) / 1000U) - (7U + spklen);
+        hcnt = ((I2C_CLOCK() / 1000U / 1000U) * (((1000U * 1000U * 1000U) / (speed * 2U)) - scl_fall_time) / 1000U) - (7U + spklen);
         if (speed < I2C_SPEED_400K)
         {
             ll_i2c_set_clock_high_period_ss(p_i2c->p_instance, hcnt);

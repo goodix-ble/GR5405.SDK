@@ -65,7 +65,7 @@
 #define APP_UART_TX_PINMUX                  APP_IO_MUX_7
 #define APP_UART_RX_PINMUX                  APP_IO_MUX_8
 #define APP_UART_TX_PULL                    APP_IO_NOPULL
-#define APP_UART_RX_PULL                    APP_IO_PULLUP
+#define APP_UART_RX_PULL                    APP_IO_NOPULL
 
 #define APP_UART1_ID                        APP_UART_ID_1
 #define APP_UART1_BAUDRATE                  115200
@@ -191,6 +191,29 @@
 #define APP_DF_ANT_SW_3_PIN                APP_IO_PIN_3
 #define APP_DF_ANT_SW_3_PIN_TYPE           APP_IO_TYPE_MSIO
 #define APP_DF_ANT_SW_3_MUX                APP_IO_MUX_22
+
+/*******SPI2CAN IO CONFIG***************************/
+#define APP_SPI2CAN_CS_IO_TYPE             APP_IO_TYPE_GPIOA
+#define APP_SPI2CAN_CS_PIN                 APP_IO_PIN_6
+#define APP_SPI2CAN_CS_PINMUX              APP_IO_MUX_43
+#define APP_SPI2CAN_CLK_IO_TYPE            APP_IO_TYPE_GPIOA
+#define APP_SPI2CAN_CLK_PIN                APP_IO_PIN_4
+#define APP_SPI2CAN_CLK_PINMUX             APP_IO_MUX_42
+#define APP_SPI2CAN_MOSI_IO_TYPE           APP_IO_TYPE_GPIOA
+#define APP_SPI2CAN_MOSI_PIN               APP_IO_PIN_3
+#define APP_SPI2CAN_MOSI_PINMUX            APP_IO_MUX_46
+#define APP_SPI2CAN_MISO_IO_TYPE           APP_IO_TYPE_GPIOA
+#define APP_SPI2CAN_MISO_PIN               APP_IO_PIN_2
+#define APP_SPI2CAN_MISO_PINMUX            APP_IO_MUX_45
+#define APP_SPI2CAN_WKRQ_IO_TYPE           APP_IO_TYPE_AON
+#define APP_SPI2CAN_WKRQ_PIN               APP_IO_PIN_5
+#define APP_SPI2CAN_WKRQ_PINMUX            APP_IO_MUX_0
+#define APP_SPI2CAN_INT_IO_TYPE            APP_IO_TYPE_AON
+#define APP_SPI2CAN_INT_PIN                APP_IO_PIN_4
+#define APP_SPI2CAN_INT_PINMUX             APP_IO_MUX_0
+#define APP_SPI2CAN_RST_IO_TYPE            APP_IO_TYPE_GPIOA
+#define APP_SPI2CAN_RST_PIN                APP_IO_PIN_8
+#define APP_SPI2CAN_RST_PINMUX             APP_IO_MUX_0
 
 /******************************************************************************/
 
